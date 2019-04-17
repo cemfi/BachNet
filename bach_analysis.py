@@ -10,7 +10,7 @@ from tqdm import tqdm
 from bach_data import BachDataset
 from bach_net import AnalysisNet3
 from bach_Synthesizer import Synthesizer
-from bach_datadownloader_new import DataDownloader2
+from bach_datadownloader_new import DataDownloader
 from bach_neurons_function import NeuronsFunctionComparator
 
 # hyperparameters
@@ -24,7 +24,7 @@ batchSize = 1
 
 data_path = os.path.join('.', 'chordDataSQ')
 if not os.path.exists(data_path):
-    downloader = DataDownloader2(data_path, [-6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5], True)
+    downloader = DataDownloader(data_path, [-6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5], True)
     downloader.download()
 
 use_cuda = torch.cuda.is_available()

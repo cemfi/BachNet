@@ -1,36 +1,29 @@
 import subprocess
-from random import choice
-
-from tqdm import tqdm
-
-learningRate = [0.001] #, 0.01, 0.1]   #0.001 einzig wahres
-gamma = [0.5, 0.7, 0.9, 1]
-hiddenSize = [64, 128, 256, 512]    #64 auch mies
-numberHidden = [1, 2, 3, 4, 5]      #5 layers zu viel
-frameSize = [16, 32]
-dropout =[0.1, 0.2, 0.3, 0.4, 0.5]
-comment = ""
+from random import choice, randint
 
 
-def call_main(lr, g, hs, nh, fs, do):
+def call_main(learning_rate, learning_gamma, hidden_size, number_hidden, frame_size, dropout, number_epochs=20):
     subprocess.call([
-        'python3', 'Main4.py',
-        '-lr', str(lr),
-        '-g', str(g),
-        '-hs', str(hs),
-        '-nh', str(nh),
-        '-fs', str(fs),
-        '-do', str(do)
-        ]
-    )
+        'python', 'main.py',
+        '-lr', str(learning_rate),
+        '-g', str(learning_gamma),
+        '-hs', str(hidden_size),
+        '-nh', str(number_hidden),
+        '-fs', str(frame_size),
+        '-do', str(dropout),
+        '-ne', str(number_epochs)
+    ])
 
-if __name__ == '__main__':
-    for i in tqdm(range(100)):
-        call_main(
-            choice(learningRate),
-            choice(gamma),
-            choice(hiddenSize),
-            choice(numberHidden),
-            choice(frameSize),
-            choice(dropout)
-        )
+
+while True:
+    config = {
+        'learning_rate': choice([0.001]),
+        'learning_gamma': choice([0.9]),
+        'hidden_size': randint(500, 1500),
+        'number_hidden': randint(2, 4),
+        'frame_size': randint(1, 32),
+        'dropout': choice([0.5]),
+        'number_epochs': 25
+    }
+
+    call_main(**config)

@@ -8,7 +8,7 @@ from tqdm import tqdm
 from bach_partToDataArray import PartConverter
 
 
-class DataDownloader2:
+class DataDownloader:
     def __init__(self, pathFolder, transpositions=[0], overwrite=True):
         print("Downloader instantiated")
         self.transpositionsDataAug = transpositions
@@ -18,7 +18,7 @@ class DataDownloader2:
 
     def download(self, valPercent=5, piecesMax=100000):
         print("Now Downloading Files. Searching Corpus.")
-        #cb = corpus.search('palestrina')
+        # cb = corpus.search('palestrina')
         cb = corpus.search('bach/bwv')
         c = 0
         cTrain = 0
@@ -29,8 +29,8 @@ class DataDownloader2:
         pc = PartConverter()
         for x in tqdm(cb):
             title = x.metadata.title
-            #x.show()
-            #x.show("text")
+            # x.show()
+            # x.show("text")
             if title == "bwv248.64-6.mxl":
                 continue
             # bwv248.64-6.mxl #invisible break (doesn't matter cause other instruments play)
@@ -48,7 +48,6 @@ class DataDownloader2:
                 self.exceptionLog.append(exceptionEntry)
                 counterSkipped += 1
                 continue
-
 
             datafolderPiece = self.datafolderPrefix + x.metadata.title
 
@@ -69,14 +68,14 @@ class DataDownloader2:
                     np.save(fname, dataOtoFile)
                     fname = nameConcat + "/" + "i.npy"
                     np.save(fname, dataItoFile)
-                    #if title == "bwv119.9.mxl":     #duration bug
-                    if c == 1: #debug
-                        np.savetxt((self.pathFolder) + "/debugo.csv",dataOtoFile,fmt='%d')
-                        np.savetxt((self.pathFolder) + "/debugi.csv",dataItoFile,fmt='%d')
+                    # if title == "bwv119.9.mxl":     #duration bug
+                    if c == 1:  # debug
+                        np.savetxt((self.pathFolder) + "/debugo.csv", dataOtoFile, fmt='%d')
+                        np.savetxt((self.pathFolder) + "/debugi.csv", dataItoFile, fmt='%d')
 
-            if self.datafolderPrefix ==  self.pathFolder + "/train/":
+            if self.datafolderPrefix == self.pathFolder + "/train/":
                 cTrain += 1
-            elif self.datafolderPrefix ==  self.pathFolder + "/valid/":
+            elif self.datafolderPrefix == self.pathFolder + "/valid/":
                 cValid += 1
             c += 1
             if c >= piecesMax:
@@ -94,14 +93,10 @@ class DataDownloader2:
             myfile.write("\n")
             myfile.write(("processed valid: " + str(cValid)))
             myfile.write("\n")
-            myfile.write(("valid percentage:" + str(cValid/c)))
+            myfile.write(("valid percentage:" + str(cValid / c)))
             myfile.write("\n")
             myfile.write(("number of 4/4:" + str(timeSigs['4/4'])))
             myfile.write("\n")
             myfile.write(("number of 3/4:" + str(timeSigs['3/4'])))
             myfile.write("\n")
             myfile.write(("number of 3/2:" + str(timeSigs['3/2'])))
-
-# folder = "test2files"
-# downloader = DataDownloader2(folder, [-6,-5,-4,-3,-2,-1,0,1,2,3,4,5], True)
-# downloader.download()

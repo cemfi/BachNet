@@ -11,14 +11,14 @@ model = BachNet3(D_in, H, D_out, 3)
 
 # gut:
 # model.load_state_dict(torch.load('/Users/alexanderleemhuis/Informatik/PY/PRJ/2019_04_01 bach5/MODEL decaying lr 7.4./model16.pt'))
-#model.load_state_dict(torch.load('/Users/alexanderleemhuis/Informatik/PY/PRJ/2019_04_01 bach5/MODEL 20epo/model19.pt', map_location='cpu'))
+# model.load_state_dict(torch.load('/Users/alexanderleemhuis/Informatik/PY/PRJ/2019_04_01 bach5/MODEL 20epo/model19.pt', map_location='cpu'))
 model.load_state_dict(torch.load('04-16 14-35-lr0.001-g0.9-hs1279-nh3-fs16-do0.5-19.pt', map_location='cpu'))
 model.eval()
 
 pc = PartConverter()
 data = converter.parse(
-    './xml test/38.xml')#.transpose(5)
-    #'/Users/alexanderleemhuis/Informatik/PY/PRJ/2019_04_01 bach5/xml test/mond-A-noks.musicxml')#.transpose(-1)
+    './xml test/38.xml')# .transpose(5)
+    # '/Users/alexanderleemhuis/Informatik/PY/PRJ/2019_04_01 bach5/xml test/mond-A-noks.musicxml')#.transpose(-1)
 dataI, _, _, _ = pc.convertToDataArray(data, "piece", True)
 np.savetxt("debug input test.csv", dataI, fmt='%d')
 dataI = torch.unsqueeze(torch.tensor(dataI), 1)
