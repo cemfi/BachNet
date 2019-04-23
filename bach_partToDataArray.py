@@ -24,7 +24,7 @@ from tqdm import tqdm
 # 257           semiquater 1
 # 258           semiquater 1
 # 259           semiquater 1
-# 260           fermata yes
+# 260           (fermata yes)
 # 261           start
 # 262           stop
 # 263 - 274     0 sharp - 11 sharps 

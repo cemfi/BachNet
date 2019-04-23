@@ -1,7 +1,7 @@
 .DS_Store
-.idea
-__pycache__/
-
-data/
-checkpoints/
-runs/
+/chordDataSQ
+/results
+/runs
+/xml test
+/.idea
+/data

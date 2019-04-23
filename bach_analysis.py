@@ -15,9 +15,9 @@ from bach_neurons_function import NeuronsFunctionComparator
 
 # hyperparameters
 
-hiddenSize = 1024
+hiddenSize = 400
 numberHidden = 2
-frameSize = 32
+frameSize = 16
 dropout = 0.5
 
 batchSize = 1
@@ -35,13 +35,12 @@ params = {'batch_size': batchSize, 'shuffle': True}  # 'num_workers': 2}    #doe
 
 # Datasets
 dataloaders = {
-    'train': DataLoader(BachDataset(os.path.join(data_path, 'train'), frameSize, batchSize), **params)#,
-    #'valid': DataLoader(BachDataset(os.path.join(data_path, 'valid'), frameSize, batchSize), **params)
+    'train': DataLoader(BachDataset(os.path.join(data_path, 'train'), frameSize), **params)
 }
 
 model = AnalysisNet3(input_dims=278, hidden_dims=hiddenSize, output_dims=278, num_hidden_layers=numberHidden, dropout=dropout).to(device)  # former hidden 600 - wasnt better?
 
-model.load_state_dict(torch.load('04-16 10-51-lr0.001-g0.9-hs1024-nh2-fs16-do0.5-24.pt', map_location='cpu'))
+model.load_state_dict(torch.load('04-18 11-42-lr0.001-g0.9-hs400-nh2-fs16-do0.5-35.pt', map_location='cpu'))
 model.eval()
 
 nfc = NeuronsFunctionComparator()
