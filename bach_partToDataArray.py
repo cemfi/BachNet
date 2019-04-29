@@ -21,9 +21,9 @@ from tqdm import tqdm
 # 254           soprano pause
 # 255           soprano continue
 # 256           semiquater 1
-# 257           semiquater 1
-# 258           semiquater 1
-# 259           semiquater 1
+# 257           semiquater 2
+# 258           semiquater 3
+# 259           semiquater 4
 # 260           (fermata yes)
 # 261           start
 # 262           stop
@@ -107,7 +107,8 @@ class PartConverter:
                     elif e.numerator == 3 and e.denominator == 2:
                         currentTimeSig = 2
                     else:
-                        print("Carefull: TimeSignature not bach-like")
+                        print(e)
+                        raise Exception("Carefull: TimeSignature not bach-like")
 
             sopranoChanged = False  # sopranoChanged needed for tied notes later
             sopranoNoteElement = self._changeCurrentElement(sopranoNoteElement, soprano, sQasQuater)

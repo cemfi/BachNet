@@ -38,10 +38,17 @@ class AnalysisNet3(BachBase):
 
 
 class PlotNeuronNet3(BachBase):
+    def __init__(self, input_dims, hidden_dims, output_dims, num_hidden_layers, dropout=0.5, neuron=1):
+        super(PlotNeuronNet3, self).__init__(input_dims, hidden_dims, output_dims, num_hidden_layers, dropout)
+        self.neuron = neuron
+
     def forward(self, x, hidden):
         out, hidden = self.gru(x, hidden)
-        plt.plot(out[:, 0, 11].detach().numpy())
-        plt.show()
+        neuron = out[:, 0, self.neuron]
+        neuron -= torch.min(neuron)   # shift to min zero
+        neuron /= torch.max(neuron)   # scale to max one
+        plt.plot(neuron.detach().numpy())
+        plt.draw()
         out = F.relu(self.fc1(out))
         out = self.fc2(out)
         return out, hidden

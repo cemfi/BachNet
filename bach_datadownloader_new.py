@@ -64,11 +64,10 @@ class DataDownloader:
                     data_out_to_file[(138 + tp):(185 + tp), :] = dataO[138:185, :]
                     data_in_to_file[(200 + tp):(247 + tp), :] = dataI[200:247, :]
 
-                    keyShift = (tp * 7) % 12
-                    print(tp, "-", keyShift)
-                    print(data_in_to_file[263:275,0])
+                    keyShift = (tp * 7) % 12  # C -> E is tp=4 so plus 4 sharps
+
                     data_in_to_file[263:275,:] = np.roll(dataI[263:275,:], keyShift, axis=0)
-                    print(data_in_to_file[263:275,0])
+
 
                     fname = nameConcat + "/" + "o.npy"
                     np.save(fname, data_out_to_file)

@@ -1,13 +1,12 @@
 import torch
 import matplotlib.pyplot as plt
 import numpy as np
-from music21 import chord, stream, note, tie, key, meter, clef
+from music21 import pitch, stream, note, tie, key, meter, clef
 
 
 
 class Synthesizer:
     def __init__(self):
-        print("Synth")
         self.current_ts = None
         self.current_ks = None
 
@@ -29,12 +28,10 @@ class Synthesizer:
         p2 = stream.Part(id='tenor')
         p3 = stream.Part(id='bass')
 
-
-
         counter = 0
 
-
         for chordFound in arr:
+            # print(chordFound)
             soprano_note_midi = np.argsort(chordFound[194:256])[-1] + 30  # ende plus 2, damit pause und continues drin
             alto_note_midi = np.argsort(chordFound[132:194])[-1] + 30
             tenor_note_midi = np.argsort(chordFound[70:132])[-1] + 30
@@ -78,17 +75,10 @@ class Synthesizer:
 
             duration = 0.5
 
-            print(soprano_note_midi)
-            print(alto_note_midi)
-            print(self.last_s_note_midi)
             soprano_note, self.last_s_note_midi = self._make_element_from_midi(soprano_note_midi, self.last_s_note, duration, self.last_s_note_midi)
-            print(self.last_a_note_midi)
             alto_note, self.last_a_note_midi = self._make_element_from_midi(alto_note_midi, self.last_a_note, duration, self.last_a_note_midi)
-            print(self.last_t_note_midi)
             tenor_note, self.last_t_note_midi = self._make_element_from_midi(tenor_note_midi, self.last_t_note, duration, self.last_t_note_midi)
-            print(self.last_b_note_midi)
             bass_note, self.last_b_note_midi = self._make_element_from_midi(bass_note_midi, self.last_b_note, duration, self.last_b_note_midi)
-            print(self.last_s_note_midi)
 
             soprano_note.lyric = str(counter)
             counter += 1
@@ -101,7 +91,6 @@ class Synthesizer:
             self.last_a_note = alto_note
             self.last_t_note = tenor_note
             self.last_b_note = bass_note
-
 
         p0.append(m_s)
         p1.append(m_a)
@@ -119,28 +108,32 @@ class Synthesizer:
 
         #s.show("text")
 
-
         if show:
             s.show()
 
         return s
 
     def _make_element_from_midi(self, midi, last_note, duration, last_note_midi):
-        if midi == 90:
+        if midi == 90: # if rest is encoded
             element = note.Rest()
-        elif midi == 91:
-            if last_note_midi is None:  #first beat
+        elif midi == 91:   # if continue is encoded
+            # first beat (no note before)
+            if last_note_midi is None:
                 print("Warning: continue on first beat")
                 midi = 90
                 element = note.Rest()
+
+            # continue in cases where a note has been encountered before
             else:
                 midi = last_note_midi
-                if midi == 90:
+                if midi == 90:  # continue after rest
                     element = note.Rest()
-                else:
+                else:  # most common, "normal" continue-case: continue after note
                     element = note.Note(midi)
                 last_note.tie = tie.Tie('start')
                 element.tie = tie.Tie('stop')
+
+        # most common, "normal" overall-case: note not continue/rest but really a note
         else:
             element = note.Note(midi)
         element.duration.quarterLength = duration
@@ -163,7 +156,7 @@ class Synthesizer:
         else:
             raise Exception("no valid TS found")
 
-s = Synthesizer()
+#s = Synthesizer()
 #fileI = np.load("/Users/alexanderleemhuis/Informatik/PY/PRJ/bach git/BachNet/chordDataSQ/debugo.csv")
-fileI = np.genfromtxt("/Users/alexanderleemhuis/Informatik/PY/PRJ/bach git/BachNet/data/bwv101.7.mxl_2_-3debugi.csv")
-s.synthesizeFromArray(fileI.transpose())
+#fileI = np.genfromtxt("/Users/alexanderleemhuis/Informatik/PY/PRJ/bach git/BachNet/data/bwv101.7.mxl_2_-3debugi.csv")
+#s.synthesizeFromArray(fileI.transpose())
