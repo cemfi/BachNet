@@ -12,7 +12,6 @@ class BachBase(torch.nn.Module):
         self.gru2 = torch.nn.GRU(input_size=hidden_dims * 2, num_layers=1, hidden_size=hidden_dims, bidirectional=True)
         self.dropout1 = torch.nn.Dropout(dropout)
         self.fc1 = torch.nn.Linear(hidden_dims * 2, hidden_dims)
-        self.dropout2 = torch.nn.Dropout(dropout)
         self.fc2 = torch.nn.Linear(hidden_dims, output_dims)
 
     def init_hidden(self, n_seqs):
@@ -27,8 +26,7 @@ class BachNet3(BachBase):
         out, hidden = self.gru2(out, hidden)
         out = self.dropout1(out)
         out = F.relu(self.fc1(out))
-        out = self.dropout2(out)
-        out = self.fc2(out)
+        out = F.relu(self.fc2(out))
         return out, hidden
 
 
