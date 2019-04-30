@@ -49,7 +49,7 @@ dataloaders = {
     'valid': DataLoader(BachDataset(os.path.join(data_path, 'valid'), args.frame_size), **params)
 }
 
-model = BachNet3(input_dims=278, hidden_dims=args.hidden_size, output_dims=278, num_hidden_layers=args.number_hidden, dropout=args.dropout).to(device)  # former hidden 600 - wasnt better?
+model = BachNet3(input_dims=279, hidden_dims=args.hidden_size, output_dims=279, num_hidden_layers=args.number_hidden, dropout=args.dropout).to(device)  # former hidden 600 - wasnt better?
 criterion = torch.nn.MSELoss().to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
 scheduler = StepLR(optimizer, step_size=3, gamma=args.gamma)

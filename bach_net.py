@@ -8,19 +8,21 @@ class BachBase(torch.nn.Module):
         super(BachBase, self).__init__()
         self.num_hidden_layers = num_hidden_layers
         self.hidden_dims = hidden_dims
-        self.gru = torch.nn.GRU(input_size=input_dims, num_layers=num_hidden_layers, hidden_size=hidden_dims, bidirectional=True, dropout=dropout)
+        self.gru1 = torch.nn.GRU(input_size=input_dims, num_layers=1, hidden_size=hidden_dims, bidirectional=True, dropout=dropout)
+        self.gru2 = torch.nn.GRU(input_size=hidden_dims * 2, num_layers=1, hidden_size=hidden_dims, bidirectional=True, dropout=dropout)
         self.fc1 = torch.nn.Linear(hidden_dims * 2, hidden_dims)
         self.fc2 = torch.nn.Linear(hidden_dims, output_dims)
 
     def init_hidden(self, n_seqs):
         """Initializes hidden state"""
         weight = next(self.parameters()).data
-        return weight.new(self.num_hidden_layers * 2, n_seqs, self.hidden_dims).zero_()
+        return weight.new(self.num_hidden_layers, n_seqs, self.hidden_dims).zero_()
 
 
 class BachNet3(BachBase):
     def forward(self, x, hidden):
-        out, hidden = self.gru(x, hidden)
+        out, hidden = self.gru1(x, hidden)
+        out, hidden = self.gru2(out, hidden)
         out = F.relu(self.fc1(out))
         out = self.fc2(out)
         return out, hidden

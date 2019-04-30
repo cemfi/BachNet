@@ -1,7 +1,7 @@
 import torch
 import matplotlib.pyplot as plt
 import numpy as np
-from music21 import pitch, stream, note, tie, key, meter, clef
+from music21 import analysis, stream, note, tie, key, meter, clef
 
 
 
@@ -40,6 +40,7 @@ class Synthesizer:
             key_sig = self._get_key_sig(np.argsort(chordFound[263:275])[-1])  # arg is number of sharps
             first_note = bool(chordFound[0]) and bool(chordFound[256])
 
+            # if you're at the very start create new measures and clefs
             if counter == 0:
                 m_s = stream.Measure()
                 m_a = stream.Measure()
@@ -49,6 +50,7 @@ class Synthesizer:
                 m_a.append(clef.TrebleClef())
                 m_t.append(clef.BassClef())
                 m_b.append(clef.BassClef())
+            # if you're at a beat one append old measures and create new ones
             elif first_note:
                 p0.append(m_s)
                 p1.append(m_a)
@@ -59,6 +61,7 @@ class Synthesizer:
                 m_t = stream.Measure()
                 m_b = stream.Measure()
 
+            # if the current key sig is not the one that was found in the chord change to new one. self for time sig
             if self.current_ks != key_sig:
                 m_s.append(key_sig)
                 m_a.append(key_sig)
@@ -66,13 +69,14 @@ class Synthesizer:
                 m_b.append(key_sig)
                 self.current_ks = key_sig
 
-            if self.current_ts == None or (self.current_ts.denominator != time_sig.denominator and self.current_ts.numerator != time_sig.numerator):
+            if self.current_ts is None or (self.current_ts.denominator != time_sig.denominator and self.current_ts.numerator != time_sig.numerator):
                 m_s.append(time_sig)
                 m_a.append(time_sig)
                 m_t.append(time_sig)
                 m_b.append(time_sig)
                 self.current_ts = time_sig
 
+            # duration is always a quaver, could be changed later
             duration = 0.5
 
             soprano_note, self.last_s_note_midi = self._make_element_from_midi(soprano_note_midi, self.last_s_note, duration, self.last_s_note_midi)
@@ -80,23 +84,29 @@ class Synthesizer:
             tenor_note, self.last_t_note_midi = self._make_element_from_midi(tenor_note_midi, self.last_t_note, duration, self.last_t_note_midi)
             bass_note, self.last_b_note_midi = self._make_element_from_midi(bass_note_midi, self.last_b_note, duration, self.last_b_note_midi)
 
+            # for debugging and visualization purposes
             soprano_note.lyric = str(counter)
             counter += 1
+
+            # append notes to measures
             m_s.append(soprano_note)
             m_a.append(alto_note)
             m_t.append(tenor_note)
             m_b.append(bass_note)
 
+            # save last notes to compare later
             self.last_s_note = soprano_note
             self.last_a_note = alto_note
             self.last_t_note = tenor_note
             self.last_b_note = bass_note
 
+        # when finished finally append last measures
         p0.append(m_s)
         p1.append(m_a)
         p2.append(m_t)
         p3.append(m_b)
 
+        # make it beautiful
         p0 = p0.stripTies(retainContainers=True)
         s.append(p0)
         p1 = p1.stripTies(retainContainers=True)
@@ -106,7 +116,13 @@ class Synthesizer:
         p3 = p3.stripTies(retainContainers=True)
         s.append(p3)
 
-        #s.show("text")
+        # TODO: doesn't work!
+        #p0 = self._simplify_enharmonics_in_stream(p0)
+        #p1 = self._simplify_enharmonics_in_stream(p1)
+        #p2 = self._simplify_enharmonics_in_stream(p2)
+        #p3 = self._simplify_enharmonics_in_stream(p3)
+
+        #s.show("text") # debugging
 
         if show:
             s.show()
@@ -153,8 +169,35 @@ class Synthesizer:
             return meter.TimeSignature('3/4')
         elif ts_bits[2] == 1:
             return  meter.TimeSignature('3/2')
+        elif ts_bits[3] == 1:
+            return  meter.TimeSignature('12/8')
         else:
             raise Exception("no valid TS found")
+
+    def _simplify_enharmonics_in_stream(self, st):
+        print(st)
+        pitch_list_for_accidental_simplify = []
+        for measure in st:
+            print(measure)
+            for el in measure:
+                print(el)
+                if hasattr(el, 'pitch'):
+                    pitch_list_for_accidental_simplify.append(el.pitch)
+
+        print(pitch_list_for_accidental_simplify)
+
+        es = analysis.enharmonics.EnharmonicSimplifier(pitch_list_for_accidental_simplify)
+        print(es.bestPitches())
+        r = es.bestPitches()
+
+        print(es.bestPitches())
+
+        elcount = 0
+        for measure in st:
+            for el in measure:
+                if hasattr(el, 'pitch'):
+                    el.pitch = pitch_list_for_accidental_simplify[elcount]
+                    elcount += 1
 
 #s = Synthesizer()
 #fileI = np.load("/Users/alexanderleemhuis/Informatik/PY/PRJ/bach git/BachNet/chordDataSQ/debugo.csv")

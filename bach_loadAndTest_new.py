@@ -6,19 +6,19 @@ from music21 import chord, stream, note, converter, metadata
 from bach_Synthesizer import Synthesizer
 from bach_partToDataArray import PartConverter
 
-D_in, H, D_out = 278, 400, 278
+D_in, H, D_out = 279, 1165, 279
 model = BachNet3(D_in, H, D_out, 2)
 
 # gut:
 # model.load_state_dict(torch.load('/Users/alexanderleemhuis/Informatik/PY/PRJ/2019_04_01 bach5/MODEL decaying lr 7.4./model16.pt'))
 # model.load_state_dict(torch.load('/Users/alexanderleemhuis/Informatik/PY/PRJ/2019_04_01 bach5/MODEL 20epo/model19.pt', map_location='cpu'))
-model.load_state_dict(torch.load('04-23 16-34-lr0.001-g0.9-hs400-nh2-fs16-do0.5-34.pt', map_location='cpu'))
+model.load_state_dict(torch.load('04-18 09-46-lr0.001-g0.9-hs1165-nh2-fs26-do0.5-49.pt', map_location='cpu'))
 model.eval()
 
 pc = PartConverter()
 data = converter.parse(
-#    './xml test/38.xml')# .transpose(5)
-    './xml test/test1ks.musicxml')# .transpose(5)
+    './xml test/38.xml')# .transpose(5)
+#    './xml test/test1ks.musicxml')# .transpose(5)
 #    './xml test/mond-A-Aks.musicxml')# .transpose(5)
 dataI, _, _, _ = pc.convertToDataArray(data, "piece", True)
 np.savetxt("debug input test.csv", dataI, fmt='%d')

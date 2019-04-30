@@ -31,11 +31,12 @@ from tqdm import tqdm
 # 275           4/4
 # 276           3/4
 # 277           3/2
+# 278           12/8
 
 class PartConverter:
     def __init__(self):
         self.skipFile = False
-        self.timeSigs = {'4/4': 0, '3/4': 0, '3/2': 0}
+        self.timeSigs = {'4/4': 0, '3/4': 0, '3/2': 0, '12/8': 0}
 
     def convertToDataArray(self, score, title="", inputOnly=False):  # input wether a score which constists of one part only or a metadataelement from music21
         self.exceptionEntry = None
@@ -49,10 +50,6 @@ class PartConverter:
                 alto = score.parse()['Alto']
                 tenor = score.parse()['Tenor']
                 bass = score.parse()['Bass']
-                #soprano = score.parse()['spine_0']
-                #alto = score.parse()['spine_1']
-                #tenor = score.parse()['spine_2']
-                #bass = score.parse()['spine_3']
             else:
                 soprano = score  # just take the score object
         except:
@@ -60,11 +57,10 @@ class PartConverter:
             print("skip: ", self.exceptionEntry)
             return None, None, True, self.exceptionEntry
 
+        # one could ignore orchestral works
         if not inputOnly:
             if score.metadata.numberOfParts > 4:
-                #self.exceptionEntry = title + ": more than SATB"
-                #return None, None, True, self.exceptionEntry
-                pass #
+                pass
 
         duration = soprano.duration.quarterLength
 
@@ -83,7 +79,7 @@ class PartConverter:
             bassNoteElement = None
 
         currentKey = None  # = number of sharps (F major = 11)
-        currentTimeSig = None  # 4/4, 3/4, 6/8 = 0, 1, 2
+        currentTimeSig = None  # 4/4, 3/4, 3/2, 12/8 = 0, 1, 2, 3
 
         sQasQuater = 0
         while sQasQuater <= duration - 0.25:  # semiquavers measured in quarters (so dur * 4 is also in quarters)
@@ -106,6 +102,8 @@ class PartConverter:
                         currentTimeSig = 1
                     elif e.numerator == 3 and e.denominator == 2:
                         currentTimeSig = 2
+                    elif e.numerator == 12 and e.denominator == 8:
+                        currentTimeSig = 3
                     else:
                         print(e)
                         raise Exception("Carefull: TimeSignature not bach-like")
@@ -123,9 +121,7 @@ class PartConverter:
             try:
                 beat = soprano.beatAndMeasureFromOffset(sQasQuater)[0]
             except Exception as e:
-                #self.exceptionEntry = title + ": " + str(e)
-                #return None, None, True, self.exceptionEntry
-                break #bwv119.9.mxl
+                break  # in some files (bwv119.9.mxl?) there seems to be a duration-bug
 
             if beat > 8:
                 raise Exception("measure longer than 8 quaters")
@@ -171,19 +167,9 @@ class PartConverter:
                     hasNoteFermata = True
 
             if not inputOnly:
-                #dataOThisBeat[0 + int(beat // 1) - 1] = 1  # 1, 2, 3, 4, 5, 6, 7, 8
-                #dataOThisBeat[256] = ((beat - int(beat)) == 0)  # every start of 4 semiquavers
-                #dataOThisBeat[257] = ((beat - int(beat)) == 0.25)
-                #dataOThisBeat[258] = ((beat - int(beat)) == 0.5)
-                #dataOThisBeat[259] = ((beat - int(beat)) == 0.75)
-                #dataOThisBeat[260] = hasNoteFermata
-
                 dataOThisBeat[8 + bassNote - 30] = 1  # where in array notes start + note - 30
                 dataOThisBeat[70 + tenorNote - 30] = 1  # (transposing 30 notes -> has to be redone when synthesizing!)
                 dataOThisBeat[132 + altoNote - 30] = 1
-                #dataOThisBeat[194 + sopranoNote - 30] = 1
-                #self._applyTimeSig(dataOThisBeat, currentTimeSig)
-                #self._applyKey(dataOThisBeat, currentKey)
                 dataO = np.append(dataO, dataOThisBeat, axis=1)
 
             dataIThisBeat[0 + int(beat // 1) - 1] = 1  # 1, 2, 3, 4, 5, 6, 7, 8
@@ -191,8 +177,9 @@ class PartConverter:
             dataIThisBeat[257] = ((beat - int(beat)) == 0.25)
             dataIThisBeat[258] = ((beat - int(beat)) == 0.5)
             dataIThisBeat[259] = ((beat - int(beat)) == 0.75)
-            #dataIThisBeat[260] = hasNoteFermata
+            dataIThisBeat[260] = hasNoteFermata
 
+            # soprano notes
             dataIThisBeat[194 + sopranoNote - 30] = 1
             self._applyTimeSig(dataIThisBeat, currentTimeSig)
             self._applyKey(dataIThisBeat, currentKey)
@@ -212,8 +199,6 @@ class PartConverter:
 
         if not inputOnly:
             dataO = dataO[:, 1:]  # delete starttoken
-            #self._flagStartStop(dataO)
-
         dataI = dataI[:, 1:]  # delete starttoken
 
         self._flagStartStop(dataI)  # set start/stopflags
@@ -253,7 +238,7 @@ class PartConverter:
         return thisNote
 
     def _createEmptyZeros(self):
-        return np.zeros([278, 1], dtype=np.float32)
+        return np.zeros([279, 1], dtype=np.float32)
 
     def _getMidiNote(self, stream, quater, title):
         el = stream.flat.getElementAtOrBefore(quater, [note.Note, note.Rest])
@@ -302,3 +287,5 @@ class PartConverter:
             self.timeSigs['3/4'] += 1
         if ts == 2:
             self.timeSigs['3/2'] += 1
+        if ts == 3:
+            self.timeSigs['12/8'] += 1

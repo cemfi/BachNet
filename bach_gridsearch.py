@@ -18,12 +18,12 @@ def call_main(learning_rate, learning_gamma, hidden_size, number_hidden, frame_s
 while True:
     config = {
         'learning_rate': choice([0.001]),
-        'learning_gamma': choice([0.9]),
+        'learning_gamma': choice([0.8, 0.9]),
         'hidden_size': randint(500, 1500),
-        'number_hidden': randint(2, 4),
-        'frame_size': randint(1, 32),
+        'number_hidden': choice([2]),
+        'frame_size': randint(16, 32),
         'dropout': choice([0.5]),
-        'number_epochs': 25
+        'number_epochs': 35
     }
 
     call_main(**config)
