@@ -26,19 +26,23 @@ class BachNet3(BachBase):
         out, hidden = self.gru2(out, hidden)
         out = self.dropout1(out)
         out = F.relu(self.fc1(out))
-        out = F.relu(self.fc2(out))
+        out = self.fc2(out)
         return out, hidden
 
 
 class AnalysisNet3(BachBase):
     def forward(self, x, hidden):
-        out, hidden = self.gru(x, hidden)
-        neuron_all_steps = out.permute(2, 1, 0)[:, 0, :]
+        print(self.layer_neuron_pair)
+        out, hidden = self.gru1(x, hidden)
+        neurons = []
+        neurons.append(out.permute(2, 1, 0)[:, 0, :])
+        out, hidden = self.gru2(out, hidden)
+        neurons.append(out.permute(2, 1, 0)[:, 0, :])
+        out = self.dropout1(out)
         out = F.relu(self.fc1(out))
-        # out = self.dropout(out)
-        # out = self.bn1(out)
+        neurons.append(out.permute(2, 1, 0)[:, 0, :])
         out = self.fc2(out)
-        return out, hidden, neuron_all_steps
+        return out, hidden, neurons
 
 
 class PlotNeuronNet3(BachBase):
@@ -47,12 +51,14 @@ class PlotNeuronNet3(BachBase):
         self.neuron = neuron
 
     def forward(self, x, hidden):
-        out, hidden = self.gru(x, hidden)
+        out, hidden = self.gru1(x, hidden)
+        out, hidden = self.gru2(out, hidden)
         neuron = out[:, 0, self.neuron]
         neuron -= torch.min(neuron)   # shift to min zero
         neuron /= torch.max(neuron)   # scale to max one
         plt.plot(neuron.detach().numpy())
         plt.draw()
+        out = self.dropout1(out)
         out = F.relu(self.fc1(out))
         out = self.fc2(out)
         return out, hidden

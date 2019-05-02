@@ -20,7 +20,7 @@ class Synthesizer:
         self.last_t_note = None
         self.last_b_note = None
 
-    def synthesizeFromArray(self, arr, show=True):
+    def synthesizeFromArray(self, arr, show=True, ties=True):
 
         s = stream.Score(id='mainScore')
         p0 = stream.Part(id='sopran')
@@ -86,6 +86,7 @@ class Synthesizer:
 
             # for debugging and visualization purposes
             soprano_note.lyric = str(counter)
+            alto_note.lyric = "0"
             counter += 1
 
             # append notes to measures
@@ -107,13 +108,14 @@ class Synthesizer:
         p3.append(m_b)
 
         # make it beautiful
-        p0 = p0.stripTies(retainContainers=True)
+        if ties:
+            p0 = p0.stripTies(retainContainers=True)
+            p1 = p1.stripTies(retainContainers=True)
+            p2 = p2.stripTies(retainContainers=True)
+            p3 = p3.stripTies(retainContainers=True)
         s.append(p0)
-        p1 = p1.stripTies(retainContainers=True)
         s.append(p1)
-        p2 = p2.stripTies(retainContainers=True)
         s.append(p2)
-        p3 = p3.stripTies(retainContainers=True)
         s.append(p3)
 
         # TODO: doesn't work!

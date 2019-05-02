@@ -1,4 +1,4 @@
-from music21 import corpus, note, key, meter, expressions
+from music21 import repeat, note, key, meter, expressions
 import os
 import numpy as np
 from tqdm import tqdm
@@ -46,10 +46,15 @@ class PartConverter:
 
         try:
             if not inputOnly:
-                soprano = score.parse()['Soprano']
-                alto = score.parse()['Alto']
-                tenor = score.parse()['Tenor']
-                bass = score.parse()['Bass']
+                score_parsed = score.parse()
+                soprano = score_parsed['Soprano']
+                # soprano = self._extend_repeats(soprano)
+                alto = score_parsed['Alto']
+                # alto = self._extend_repeats(alto)
+                tenor = score_parsed['Tenor']
+                # tenor = self._extend_repeats(tenor)
+                bass = score_parsed['Bass']
+                # bass = self._extend_repeats(bass)
             else:
                 soprano = score  # just take the score object
         except:
@@ -289,3 +294,12 @@ class PartConverter:
             self.timeSigs['3/2'] += 1
         if ts == 3:
             self.timeSigs['12/8'] += 1
+
+    def _extend_repeats(self, score_org):
+        e = repeat.Expander(score_org)
+        e.repeatBarsAreCoherent()
+        s2 = e.process()
+        if score_org != s2:
+            score_org.show('text')
+            s2.show('text')
+        return s2
