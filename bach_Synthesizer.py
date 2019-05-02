@@ -36,7 +36,7 @@ class Synthesizer:
             alto_note_midi = np.argsort(chordFound[132:194])[-1] + 30
             tenor_note_midi = np.argsort(chordFound[70:132])[-1] + 30
             bass_note_midi = np.argsort(chordFound[8:70])[-1] + 30
-            time_sig = self._get_time_sig(chordFound[275:278])
+            time_sig = self._get_time_sig(chordFound[275:279])
             key_sig = self._get_key_sig(np.argsort(chordFound[263:275])[-1])  # arg is number of sharps
             first_note = bool(chordFound[0]) and bool(chordFound[256])
 
