@@ -184,6 +184,7 @@ class PartConverter:
             dataIThisBeat[259] = ((beat - int(beat)) == 0.75)
             dataIThisBeat[260] = hasNoteFermata
 
+
             # soprano notes
             dataIThisBeat[194 + sopranoNote - 30] = 1
             self._applyTimeSig(dataIThisBeat, currentTimeSig)

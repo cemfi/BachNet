@@ -90,4 +90,7 @@ for epoch in tqdm(range(args.epochs), unit='epoch'):
     os.makedirs(directory, exist_ok=True)
 
     tempName = os.path.join(directory, idString + str(epoch) + ".pt")
-    torch.save(model.state_dict(), tempName)
+    torch.save({
+        'state': model.state_dict(),
+        'config': args
+    }, tempName)

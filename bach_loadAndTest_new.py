@@ -6,25 +6,31 @@ from music21 import chord, stream, note, converter, metadata
 from bach_Synthesizer import Synthesizer
 from bach_partToDataArray import PartConverter
 
-D_in, H, D_out = 279, 1002, 279
+D_in, H, D_out = 279, 1103, 279
+#D_in, H, D_out = 279, 1115, 279
+
+#D_in, H, D_out = 279, 35, 279
+
 model = BachNet3(D_in, H, D_out, 2)
 
-# gut:
-# model.load_state_dict(torch.load('/Users/alexanderleemhuis/Informatik/PY/PRJ/2019_04_01 bach5/MODEL decaying lr 7.4./model16.pt'))
-# model.load_state_dict(torch.load('/Users/alexanderleemhuis/Informatik/PY/PRJ/2019_04_01 bach5/MODEL 20epo/model19.pt', map_location='cpu'))
-model.load_state_dict(torch.load('04-30 14-46-lr0.001-g0.9-hs1002-nh2-fs21-do0.5-22.pt', map_location='cpu'))
+#model.load_state_dict(torch.load('05-06 14-44-lr0.003-g0.99-hs35-nh2-fs16-do0.5-500.pt', map_location='cpu'))
+
+model.load_state_dict(torch.load('04-30 12-03-lr0.001-g0.8-hs1103-nh2-fs18-do0.5-30 gut.pt', map_location='cpu'))
+#model.load_state_dict(torch.load('04-30 12-46-lr0.001-g0.9-hs1115-nh2-fs16-do0.5-19 gut bei kirchen.pt', map_location='cpu'))
+#model.load_state_dict(torch.load('04-30 12-46-lr0.001-g0.9-hs1115-nh2-fs16-do0.5-99 over.pt', map_location='cpu'))
+
 model.eval()
 
 pc = PartConverter()
 data = converter.parse(
-#    './xml test/Alex AI fermate.musicxml')# .transpose(5)
-    './xml test/Auferstanden_Aus_Ruinen.musicxml')# .transpose(5)
-#   './xml test/38.xml')# .transpose(5)
-#    './xml test/test1ks.musicxml')# .transpose(5)
-#    './xml test/mond-A-Aks.musicxml')# .transpose(5)
+#    './xml test/floskel.musicxml')
+    './xml test/38 long.musicxml')
+#    './xml test/211 schluss.musicxml')   # Kaffeekantate
+#    './xml test/05.musicxml')  # bassdurchgänge
+#    './xml test/06 sopran.musicxml')   # ausweichungen
+#    './xml test/kirby fsharp.mxl')
 
 
-# carefull: no repeats are extended in test-data!
 dataI, _, _, _ = pc.convertToDataArray(data, "piece", True)
 np.savetxt("debug input test.csv", dataI, fmt='%d')
 dataI = torch.unsqueeze(torch.tensor(dataI), 1)
@@ -35,7 +41,7 @@ h = model.init_hidden(len(dataI[0]))
 y_pred, hidden = model(torch.tensor(dataI), h)
 y_np = y_pred.detach().numpy()
 
-print(dataI.shape)  # length, batch=1, 278vals
+print(dataI.shape)  # length, batch=1, 279 vals
 print(y_np.shape)
 
 y_np[:,0,:7] = dataI[:,0,:7]
@@ -44,4 +50,5 @@ y_np[:,0,194:] = dataI[:,0,194:]
 y_np = np.squeeze(y_np, axis=1)
 
 bachSynth = Synthesizer()
-bachSynth.synthesizeFromArray(y_np)
+score = bachSynth.synthesizeFromArray(y_np,piano_reduction=True)
+print(score.write('lily'))

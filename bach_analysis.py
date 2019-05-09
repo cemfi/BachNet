@@ -13,16 +13,20 @@ from bach_net import AnalysisNet3, PlotNeuronNet3
 from bach_Synthesizer import Synthesizer
 from bach_datadownloader_new import DataDownloader
 
-score_and_neurons_path = os.path.join('.', 'neuron_analysis_results')
+modelID = '05-06 13-27-lr0.003-g0.99-hs40-nh2-fs32-do0.5-269.pt'
+model_path = 'neuron_analysis_results_' + modelID
+score_and_neurons_path = os.path.join('.', model_path)
+
 data_path = os.path.join('.', 'data_copies_for_analysis')
 
-hiddenSize = 1103
+hiddenSize = 40
 numberHidden = 2
 dropout = 0.5
 batchSize = 1
 
 if os.path.exists(score_and_neurons_path):
-    print("Analysis folder found. Quitting. To run analysis again, delete folder.")
+    print("Analysis folder found. Quitting to not overwrite previous results.")
+    print("To run analysis again, delete folder.")
     raise SystemExit
 
 if not os.path.exists(data_path):
@@ -40,8 +44,9 @@ dataloaders = {
     'train': DataLoader(BachDataset(os.path.join(data_path, 'train')), **params)
 }
 
-model = AnalysisNet3(input_dims=279, hidden_dims=hiddenSize, output_dims=279, num_hidden_layers=numberHidden, dropout=dropout, neurons=plot_pairs).to(device)  # former hidden 600 - wasnt better?
-model.load_state_dict(torch.load('04-30 12-03-lr0.001-g0.8-hs1103-nh2-fs18-do0.5-30.pt', map_location='cpu'))
+
+model = AnalysisNet3(input_dims=279, hidden_dims=hiddenSize, output_dims=279, num_hidden_layers=numberHidden, dropout=dropout) # former hidden 600 - wasnt better?
+model.load_state_dict(torch.load(modelID, map_location='cpu'))
 
 model.eval()
 

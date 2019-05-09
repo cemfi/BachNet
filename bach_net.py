@@ -25,21 +25,22 @@ class BachNet3(BachBase):
         out, hidden = self.gru1(x, hidden)
         out, hidden = self.gru2(out, hidden)
         out = self.dropout1(out)
-        out = F.relu(self.fc1(out))
+        out = self.fc1(out)
+        out = F.relu(out)
         out = self.fc2(out)
         return out, hidden
 
 
 class AnalysisNet3(BachBase):
     def forward(self, x, hidden):
-        print(self.layer_neuron_pair)
         out, hidden = self.gru1(x, hidden)
         neurons = []
         neurons.append(out.permute(2, 1, 0)[:, 0, :])
         out, hidden = self.gru2(out, hidden)
         neurons.append(out.permute(2, 1, 0)[:, 0, :])
         out = self.dropout1(out)
-        out = F.relu(self.fc1(out))
+        out = self.fc1(out)
+        out = F.relu(out)
         neurons.append(out.permute(2, 1, 0)[:, 0, :])
         out = self.fc2(out)
         return out, hidden, neurons
