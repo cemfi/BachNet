@@ -87,7 +87,7 @@ def train(config):
                         loss.backward()
                         optimizer.step()
 
-        if config.save_checkpoints:
+        if config['save_checkpoints']:
             tempName = os.path.join(checkpoint_dir, idString + str(epoch) + ".pt")
             torch.save({'state': model.state_dict(), 'config': config}, tempName)
 
