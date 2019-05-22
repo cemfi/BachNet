@@ -5,7 +5,7 @@ from music21 import corpus, note
 import numpy as np
 from tqdm import tqdm
 
-from bach_partToDataArray import PartConverter
+from part_to_data_array import PartConverter
 
 
 class DataDownloader:
@@ -33,7 +33,7 @@ class DataDownloader:
             # x.show("text")
             if title == "bwv248.64-6.mxl":
                 continue
-            # bwv248.64-6.mxl #invisible break (doesn't matter cause other instruments play)
+            # bwv248.64-6.mxl #invisible break
 
             if c <= (len(cb) * (valPercent / 100)):
                 self.datafolderPrefix = self.pathFolder + "/valid/"
@@ -57,21 +57,33 @@ class DataDownloader:
                     break
                 else:
                     os.makedirs(nameConcat, exist_ok=True)
-                    dataOtoFile = np.array(dataO, copy=True)
-                    dataItoFile = np.array(dataI, copy=True)
-                    dataOtoFile[(14 + tp):(61 + tp), :] = dataO[14:61, :]
-                    dataOtoFile[(76 + tp):(123 + tp), :] = dataO[76:123, :]
-                    dataOtoFile[(138 + tp):(185 + tp), :] = dataO[138:185, :]
-                    dataOtoFile[(200 + tp):(247 + tp), :] = dataO[200:247, :]
-                    dataItoFile[(200 + tp):(247 + tp), :] = dataI[200:247, :]
+                    data_out_to_file = np.array(dataO, copy=True)
+                    data_in_to_file = np.array(dataI, copy=True)
+                    # reset before transposition is applied
+                    data_out_to_file[8:67, :] = np.zeros((59, len(data_out_to_file[0, :])))
+                    data_out_to_file[70:129, :] = np.zeros((59, len(data_out_to_file[0, :])))
+                    data_out_to_file[132:191, :] = np.zeros((59, len(data_out_to_file[0, :])))
+                    data_in_to_file[194:253, :] = np.zeros((59, len(data_in_to_file[0, :])))
+                    # copy moved music
+                    data_out_to_file[(14 + tp):(61 + tp), :] = dataO[14:61, :]
+                    data_out_to_file[(76 + tp):(123 + tp), :] = dataO[76:123, :]
+                    data_out_to_file[(138 + tp):(185 + tp), :] = dataO[138:185, :]
+                    data_in_to_file[(200 + tp):(247 + tp), :] = dataI[200:247, :]
+
+                    keyShift = (tp * 7) % 12  # C -> E is tp=4 so plus 4 sharps
+
+                    data_in_to_file[263:275,:] = np.roll(dataI[263:275,:], keyShift, axis=0)
+
+
                     fname = nameConcat + "/" + "o.npy"
-                    np.save(fname, dataOtoFile)
+                    np.save(fname, data_out_to_file)
                     fname = nameConcat + "/" + "i.npy"
-                    np.save(fname, dataItoFile)
+                    np.save(fname, data_in_to_file)
                     # if title == "bwv119.9.mxl":     #duration bug
-                    if c == 1:  # debug
-                        np.savetxt((self.pathFolder) + "/debugo.csv", dataOtoFile, fmt='%d')
-                        np.savetxt((self.pathFolder) + "/debugi.csv", dataItoFile, fmt='%d')
+                    # if title == "bwv119.9.mxl":     #duration bug
+                    if c == 2:  # random number for debug
+                        np.savetxt(((self.pathFolder) + "/" + title + "_" + str(c) + "_" + str(tp) + "debugo.csv"), data_out_to_file, fmt='%d')
+                        np.savetxt(((self.pathFolder) + "/" + title + "_" + str(c) + "_" + str(tp) + "debugi.csv"), data_in_to_file, fmt='%d')
 
             if self.datafolderPrefix == self.pathFolder + "/train/":
                 cTrain += 1
@@ -100,3 +112,5 @@ class DataDownloader:
             myfile.write(("number of 3/4:" + str(timeSigs['3/4'])))
             myfile.write("\n")
             myfile.write(("number of 3/2:" + str(timeSigs['3/2'])))
+            myfile.write("\n")
+            myfile.write(("number of 12/8:" + str(timeSigs['12/8'])))
