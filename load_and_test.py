@@ -8,7 +8,7 @@ from model import BachNet
 from synthesizer import Synthesizer
 from utils.part_to_data_array import PartConverter
 
-loaded = torch.load('05-23 12-12-lr0.005-g0.98-ls5-hs45-nh2-fs32-do0.5-222.pt', map_location='cpu')
+loaded = torch.load('05-23 16-18-lr0.0001-g0.9-ls3-hs45-nh2-fs16-do0.5-0.pt', map_location='cpu')
 config = loaded['config']
 
 D_in, H, D_out = 279, config['hidden_size'], 62
@@ -24,9 +24,9 @@ data = converter.parse(
 #    './xml test/floskel.musicxml')
 #    './xml test/38 long.musicxml')
 #    './xml test/211 schluss.musicxml')   # Kaffeekantate
-#    './xml test/05.musicxml')  # bassdurchgänge
+    './xml test/05.musicxml')  # bassdurchgänge
 #    './xml test/06 sopran.musicxml')   # ausweichungen
-    './xml test/kirby fsharp.mxl')
+#    './xml test/kirby fsharp.mxl')
 
 
 # carefull: no repeats are extended in test-data!
