@@ -13,13 +13,13 @@ from bach_net import AnalysisNet3, PlotNeuronNet3
 from bach_Synthesizer import Synthesizer
 from bach_datadownloader_new import DataDownloader
 
-modelID = '05-06 13-27-lr0.003-g0.99-hs40-nh2-fs32-do0.5-269.pt'
+modelID = '04-30 12-03-lr0.001-g0.8-hs1103-nh2-fs18-do0.5-30 gut.pt'
 model_path = 'neuron_analysis_results_' + modelID
 score_and_neurons_path = os.path.join('.', model_path)
 
 data_path = os.path.join('.', 'data_copies_for_analysis')
 
-hiddenSize = 40
+hiddenSize = 1103
 numberHidden = 2
 dropout = 0.5
 batchSize = 1
@@ -75,7 +75,7 @@ for phase in ['train']:  #, 'valid']:
 
             show_score = False
             score = s.synthesizeFromArray(netOut, show_score, False)   # no ties to prepare analysis!
-
+            # score = s.synthesizeFromArray(netOut, show_score, True) ties for example in documentation
 
             path = os.path.join(score_and_neurons_path, current_title)
             if not os.path.exists(path):
@@ -89,6 +89,9 @@ for phase in ['train']:  #, 'valid']:
             score_name = current_title + ".musicxml"
             path_score = os.path.join(path, score_name)
             score.write("musicxml", path_score)
+            score_name_ly = current_title + ".ly"
+            path_score_ly = os.path.join(path, score_name_ly)
+            score.write("lily", path_score_ly)
 
         if counter >= epo_stop:
             break

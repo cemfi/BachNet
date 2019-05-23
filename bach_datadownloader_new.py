@@ -44,6 +44,8 @@ class DataDownloader:
 
             dataI, dataO, skipFile, exceptionEntry = pc.convertToDataArray(x, title)
             timeSigs = pc.getTimeSigs()
+            sharps = pc.getSharps()
+            found16ss = pc.get16s()
             if exceptionEntry is not None:
                 self.exceptionLog.append(exceptionEntry)
                 counterSkipped += 1
@@ -114,3 +116,8 @@ class DataDownloader:
             myfile.write(("number of 3/2:" + str(timeSigs['3/2'])))
             myfile.write("\n")
             myfile.write(("number of 12/8:" + str(timeSigs['12/8'])))
+            myfile.write("\n")
+            myfile.write("\n")
+            myfile.write(("16s" + str(found16ss)))
+            myfile.write("\n")
+            myfile.write(("sharps" + str(sharps)))

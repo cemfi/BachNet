@@ -6,10 +6,10 @@ from music21 import chord, stream, note, converter, metadata
 from bach_Synthesizer import Synthesizer
 from bach_partToDataArray import PartConverter
 
+
 D_in, H, D_out = 279, 1103, 279
 #D_in, H, D_out = 279, 1115, 279
 
-#D_in, H, D_out = 279, 35, 279
 
 model = BachNet3(D_in, H, D_out, 2)
 
@@ -23,13 +23,13 @@ model.eval()
 
 pc = PartConverter()
 data = converter.parse(
-#    './xml test/floskel.musicxml')
-    './xml test/38 long.musicxml')
-#    './xml test/211 schluss.musicxml')   # Kaffeekantate
+#    './xml test/38 long.musicxml')
 #    './xml test/05.musicxml')  # bassdurchgänge
 #    './xml test/06 sopran.musicxml')   # ausweichungen
-#    './xml test/kirby fsharp.mxl')
+    './xml test/kirby fsharp.mxl')
+#    './xml test/mond-A-Aks.musicxml')
 
+#    './xml test/211 schluss.musicxml')   # Kaffeekantate
 
 dataI, _, _, _ = pc.convertToDataArray(data, "piece", True)
 np.savetxt("debug input test.csv", dataI, fmt='%d')

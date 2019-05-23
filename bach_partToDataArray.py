@@ -37,6 +37,9 @@ class PartConverter:
     def __init__(self):
         self.skipFile = False
         self.timeSigs = {'4/4': 0, '3/4': 0, '3/2': 0, '12/8': 0}
+        self.number_total_notes = 0
+        self.number_16_notes = 0
+        self.number_sharps = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0, 10: 0, 11: 0}
 
     def convertToDataArray(self, score, title="", inputOnly=False):  # input wether a score which constists of one part only or a metadataelement from music21
         self.exceptionEntry = None
@@ -61,6 +64,12 @@ class PartConverter:
             self.exceptionEntry = title + ": not all voices found"
             print("skip: ", self.exceptionEntry)
             return None, None, True, self.exceptionEntry
+
+        if not inputOnly:
+            self._search_16s(soprano)
+            self._search_16s(alto)
+            self._search_16s(tenor)
+            self._search_16s(bass)
 
         # one could ignore orchestral works
         if not inputOnly:
@@ -100,6 +109,9 @@ class PartConverter:
                         currentKey = e.sharps + 12
                     else:
                         currentKey = e.sharps
+                    for field in self.number_sharps:
+                        if currentKey == field:
+                            self.number_sharps[field] += 1
                 elif type(e) == meter.TimeSignature:
                     if e.numerator == 4 and e.denominator == 4:
                         currentTimeSig = 0
@@ -213,6 +225,8 @@ class PartConverter:
 
         if dataI is None:
             raise Exception()
+
+
         return dataI, dataO, self.skipFile, self.exceptionEntry
 
     def _applyTimeSig(self, data, currentTimeSig):
@@ -255,6 +269,7 @@ class PartConverter:
             sopranoNote = 90
             return sopranoNote, False
         else:
+            # obsolete due to filter classes
             self.exceptionEntry = title + ": unknown object found: " + str(type(el))
             print("skip: ", self.exceptionEntry)
             return 0, True
@@ -286,6 +301,12 @@ class PartConverter:
     def getTimeSigs(self):
         return self.timeSigs
 
+    def get16s(self):
+        return self.number_sharps
+
+    def getSharps(self):
+        return (self.number_total_notes, self.number_16_notes)
+
     def adjustTimeSig(self, ts):
         if ts == 0:
             self.timeSigs['4/4'] += 1
@@ -304,3 +325,10 @@ class PartConverter:
             score_org.show('text')
             s2.show('text')
         return s2
+
+    def _search_16s(self, stream__tolookin):
+        els = stream__tolookin.flat.getElementsByClass([note.Note, note.Rest])
+        for e in els:
+            self.number_total_notes += 1
+            if e.duration.quarterLength < 0.5:
+                self.number_16_notes += 1
