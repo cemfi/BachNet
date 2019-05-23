@@ -18,11 +18,12 @@ def train(config):
     os.makedirs(checkpoint_dir, exist_ok=True)
     writer = SummaryWriter(log_dir=f'runs/{idString}')
 
-    data_path = '/home/simon/Repositories/BachNet/data'
+    data_path = 'data/'
+
 
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda:0" if use_cuda else "cpu")
-    params = {'batch_size': 500, 'shuffle': True}
+    params = {'batch_size': 50, 'shuffle': True}
 
     # Datasets
     dataloaders = {
@@ -43,7 +44,7 @@ def train(config):
     model = BachNet(
         input_dims=279,
         hidden_dims=config['hidden_size'],
-        output_dims=279,
+        output_dims=62,
         num_hidden_layers=config['number_hidden'],
         dropout=config['dropout']
     ).to(device)
@@ -72,7 +73,13 @@ def train(config):
 
                 with torch.set_grad_enabled(phase == 'train'):
                     h = model.init_hidden(len(batch[0]))
-                    y_pred, hidden = model(batch, h)
+                    y_pred_B, y_pred_A, y_pred_T, hidden = model(batch, h)
+
+                    current_batchsize = y_pred_A[0, :, 0].shape[0]
+                    beforepad = torch.zeros(config['frame_size'], current_batchsize, 8)          # padding for format
+                    afterpad = torch.zeros(config['frame_size'], current_batchsize, 85)        # padding for format
+
+                    y_pred = torch.cat((beforepad, y_pred_B, y_pred_T, y_pred_A, afterpad), 2)
 
                     loss = criterion(y_pred, labels)
 
@@ -92,7 +99,7 @@ def train(config):
             torch.save({'state': model.state_dict(), 'config': config}, tempName)
 
 
-if '__name__' == '__main__':
+if __name__ == '__main__':
     from random import choice, randint
 
     config = {
@@ -103,7 +110,7 @@ if '__name__' == '__main__':
         'number_hidden': 2,
         'frame_size': 16,
         'dropout': 0.5,
-        'number_epochs': 100,
+        'number_epochs': 1,
         'save_checkpoints': True,
     }
 

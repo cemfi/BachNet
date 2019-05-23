@@ -11,8 +11,9 @@ class BachBase(torch.nn.Module):
         self.gru1 = torch.nn.GRU(input_size=input_dims, num_layers=1, hidden_size=hidden_dims, bidirectional=True)
         self.gru2 = torch.nn.GRU(input_size=hidden_dims * 2, num_layers=1, hidden_size=hidden_dims, bidirectional=True)
         self.dropout1 = torch.nn.Dropout(dropout)
-        self.fc1 = torch.nn.Linear(hidden_dims * 2, hidden_dims)
-        self.fc2 = torch.nn.Linear(hidden_dims, output_dims)
+        self.fc1b = torch.nn.Linear(hidden_dims * 2, output_dims)
+        self.fc2a = torch.nn.Linear(hidden_dims * 2 + output_dims, output_dims)
+        self.fc3t = torch.nn.Linear(hidden_dims * 2 + output_dims * 2, output_dims)
 
     def init_hidden(self, n_seqs):
         """Initializes hidden state"""
@@ -25,9 +26,12 @@ class BachNet(BachBase):
         out, hidden = self.gru1(x, hidden)
         out, hidden = self.gru2(out, hidden)
         out = self.dropout1(out)
-        out = F.relu(self.fc1(out))
-        out = self.fc2(out)
-        return out, hidden
+        out_1B = self.fc1b(out)
+        out_plusB= torch.cat((out, out_1B), 2)
+        out_2A = self.fc2a(out_plusB)
+        out_plusB_plusA = torch.cat((out_plusB, out_2A), 2)
+        out_3T = self.fc3t(out_plusB_plusA)
+        return out_1B, out_2A, out_3T, hidden
 
 
 class AnalysisNet(BachBase):
