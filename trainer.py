@@ -23,7 +23,7 @@ def train(config):
 
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda:0" if use_cuda else "cpu")
-    params = {'batch_size': 50, 'shuffle': True}
+    params = {'batch_size': 500, 'shuffle': True}
 
     # Datasets
     dataloaders = {
@@ -110,7 +110,7 @@ if __name__ == '__main__':
         'number_hidden': 2,
         'frame_size': 16,
         'dropout': 0.5,
-        'number_epochs': 1,
+        'number_epochs': 100,
         'save_checkpoints': True,
     }
 
