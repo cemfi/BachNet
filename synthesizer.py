@@ -1,7 +1,9 @@
 import torch
+import copy
+
 import matplotlib.pyplot as plt
 import numpy as np
-from music21 import analysis, stream, note, tie, key, meter, clef
+from music21 import analysis, stream, note, tie, key, meter, clef, layout, bar, expressions
 
 
 
@@ -20,7 +22,7 @@ class Synthesizer:
         self.last_t_note = None
         self.last_b_note = None
 
-    def synthesizeFromArray(self, arr, show=True, ties=True):
+    def synthesizeFromArray(self, arr, show=True, ties=True, piano_reduction=False):
 
         s = stream.Score(id='mainScore')
         p0 = stream.Part(id='sopran')
@@ -38,6 +40,7 @@ class Synthesizer:
             bass_note_midi = np.argsort(chordFound[8:70])[-1] + 30
             time_sig = self._get_time_sig(chordFound[275:279])
             key_sig = self._get_key_sig(np.argsort(chordFound[263:275])[-1])  # arg is number of sharps
+            is_fermata = chordFound[260]
             first_note = bool(chordFound[0]) and bool(chordFound[256])
 
             # if you're at the very start create new measures and clefs
@@ -79,14 +82,15 @@ class Synthesizer:
             # duration is always a quaver, could be changed later
             duration = 0.5
 
-            soprano_note, self.last_s_note_midi = self._make_element_from_midi(soprano_note_midi, self.last_s_note, duration, self.last_s_note_midi)
-            alto_note, self.last_a_note_midi = self._make_element_from_midi(alto_note_midi, self.last_a_note, duration, self.last_a_note_midi)
-            tenor_note, self.last_t_note_midi = self._make_element_from_midi(tenor_note_midi, self.last_t_note, duration, self.last_t_note_midi)
-            bass_note, self.last_b_note_midi = self._make_element_from_midi(bass_note_midi, self.last_b_note, duration, self.last_b_note_midi)
+            soprano_note, self.last_s_note_midi = self._make_element_from_midi(soprano_note_midi, self.last_s_note, duration, self.last_s_note_midi, is_fermata)
+            alto_note, self.last_a_note_midi = self._make_element_from_midi(alto_note_midi, self.last_a_note, duration, self.last_a_note_midi, is_fermata)
+            tenor_note, self.last_t_note_midi = self._make_element_from_midi(tenor_note_midi, self.last_t_note, duration, self.last_t_note_midi, is_fermata)
+            bass_note, self.last_b_note_midi = self._make_element_from_midi(bass_note_midi, self.last_b_note, duration, self.last_b_note_midi, is_fermata)
 
             # for debugging and visualization purposes
-            soprano_note.lyric = str(counter)
-            alto_note.lyric = "0"
+            if not piano_reduction:
+                soprano_note.lyric = str(counter)
+                alto_note.lyric = "0"
             counter += 1
 
             # append notes to measures
@@ -118,6 +122,31 @@ class Synthesizer:
         s.append(p2)
         s.append(p3)
 
+        if piano_reduction:
+            pr = stream.Score()
+            pr.append(copy.deepcopy(p0))
+            pr.append(copy.deepcopy(p1))
+            prPart = pr.partsToVoices(voiceAllocation=2).parts[0]
+            prPart.id = "piano_right"
+
+            pl = stream.Score()
+            pl.append(copy.deepcopy(p2))
+            pl.append(copy.deepcopy(p3))
+            plPart = pl.partsToVoices(voiceAllocation=2).parts[0]
+            plPart.id = "piano_left"
+
+            s.append(prPart)
+            s.append(plPart)
+
+            staff_group_piano = layout.StaffGroup([prPart, plPart], name = 'Reduction', abbreviation = 'Rd.', symbol = 'brace')
+            s.insert(0, staff_group_piano)
+
+        staff_group = layout.StaffGroup([p0, p1, p2, p3], symbol = 'bracket')
+        staff_group.barTogether = 'yes'
+        s.insert(0, staff_group)
+
+        s.finalBarline = bar.Barline('final')
+
         # TODO: doesn't work!
         #p0 = self._simplify_enharmonics_in_stream(p0)
         #p1 = self._simplify_enharmonics_in_stream(p1)
@@ -131,15 +160,19 @@ class Synthesizer:
 
         return s
 
-    def _make_element_from_midi(self, midi, last_note, duration, last_note_midi):
+    def _make_element_from_midi(self, midi, last_note, duration, last_note_midi, hasNoteFermata):
         if midi == 90: # if rest is encoded
             element = note.Rest()
+            if hasNoteFermata:
+                element.expressions.append(expressions.Fermata())
         elif midi == 91:   # if continue is encoded
             # first beat (no note before)
             if last_note_midi is None:
                 print("Warning: continue on first beat")
                 midi = 90
                 element = note.Rest()
+                if hasNoteFermata:
+                    element.expressions.append(expressions.Fermata())
 
             # continue in cases where a note has been encountered before
             else:
@@ -154,6 +187,8 @@ class Synthesizer:
         # most common, "normal" overall-case: note not continue/rest but really a note
         else:
             element = note.Note(midi)
+            if hasNoteFermata:
+                element.expressions.append(expressions.Fermata())
         element.duration.quarterLength = duration
         return element, midi
 
@@ -200,8 +235,3 @@ class Synthesizer:
                 if hasattr(el, 'pitch'):
                     el.pitch = pitch_list_for_accidental_simplify[elcount]
                     elcount += 1
-
-#s = Synthesizer()
-#fileI = np.load("/Users/alexanderleemhuis/Informatik/PY/PRJ/bach git/BachNet/chordDataSQ/debugo.csv")
-#fileI = np.genfromtxt("/Users/alexanderleemhuis/Informatik/PY/PRJ/bach git/BachNet/data/bwv101.7.mxl_2_-3debugi.csv")
-#s.synthesizeFromArray(fileI.transpose())

@@ -79,50 +79,49 @@ def train(config):
                     beforepad = torch.zeros(config['frame_size'], current_batchsize, 8).to(device)          # padding for format
                     afterpad = torch.zeros(config['frame_size'], current_batchsize, 85).to(device)        # padding for format
 
-                    y_pred = torch.cat((beforepad, y_pred_B, y_pred_T, y_pred_A, afterpad), 2)
+                    # y_pred = torch.cat((beforepad, y_pred_B, y_pred_T, y_pred_A, afterpad), 2)
 
                     # loss = criterion(y_pred, labels)
                     b_labels = labels[:, :, 8:70]
                     #b_labels = (torch.max(b_labels, 2)[1]).contiguous().view(-1)
                     #y_pred_B = y_pred_B.view(-1, current_batchsize * config['frame_size']).permute(1, 0)
 
-                    a_labels = labels[:, :, 70:132]
+                    t_labels = labels[:, :, 70:132]
                     #a_labels = (torch.max(a_labels, 2)[1]).contiguous().view(-1)
                     #y_pred_A = y_pred_A.view(-1, current_batchsize * config['frame_size']).permute(1, 0)
 
-                    t_labels = labels[:, :, 132:194]
+                    a_labels = labels[:, :, 132:194]
                     #t_labels = (torch.max(t_labels, 2)[1]).contiguous().view(-1)
                     #y_pred_T = y_pred_T.view(-1, current_batchsize * config['frame_size']).permute(1, 0)
 
 
                     for ts in range(config['frame_size']):
                         y_pred_B_ts = y_pred_B [ts, :, :]
-                        y_pred_A_ts = y_pred_A [ts, :, :]
                         y_pred_T_ts = y_pred_T [ts, :, :]
+                        y_pred_A_ts = y_pred_A [ts, :, :]
 
                         b_labels_ts = b_labels[ts, :, :]
                         b_labels_ts = (torch.max(b_labels_ts, 1)[1])
-                        a_labels_ts = a_labels[ts, :, :]
-                        a_labels_ts = (torch.max(a_labels_ts, 1)[1])
                         t_labels_ts = t_labels[ts, :, :]
                         t_labels_ts = (torch.max(t_labels_ts, 1)[1])
+                        a_labels_ts = a_labels[ts, :, :]
+                        a_labels_ts = (torch.max(a_labels_ts, 1)[1])
 
                         y_pred_B_ts = y_pred_B_ts.squeeze()
-                        y_pred_A_ts = y_pred_A_ts.squeeze()
                         y_pred_T_ts = y_pred_T_ts.squeeze()
-                        b_labels_ts = b_labels_ts.squeeze()
-                        a_labels_ts = a_labels_ts.squeeze()
-                        t_labels_ts = t_labels_ts.squeeze()
+                        y_pred_A_ts = y_pred_A_ts.squeeze()
 
-                        print(y_pred_B_ts.shape)
+                        b_labels_ts = b_labels_ts.squeeze()
+                        t_labels_ts = t_labels_ts.squeeze()
+                        a_labels_ts = a_labels_ts.squeeze()
 
                         loss_b = criterion(y_pred_B_ts, b_labels_ts)
-                        loss_a = criterion(y_pred_A_ts, a_labels_ts)
                         loss_t = criterion(y_pred_T_ts, t_labels_ts)
+                        loss_a = criterion(y_pred_A_ts, a_labels_ts)
                         # loss1 = criterion(y_pred.view(-1,current_batchsize * config['frame_size']), labels.contiguous().view(-1,current_batchsize * config['frame_size']))
                         # loss = lossfn(scores.view(-1,batch_size*time_steps), labels.contiguous().view(-1))
 
-                        loss = sum([loss_b, loss_a, loss_t])
+                        loss = sum([loss_b, loss_t, loss_a])
 
                         if phase == 'train':
                             optimizer.zero_grad()
@@ -144,10 +143,10 @@ if __name__ == '__main__':
     from random import choice, randint
 
     config = {
-        'learning_rate': 0.0001,
+        'learning_rate': 0.001,
         'learning_gamma': 0.9,
         'learning_step': 3,
-        'hidden_size': 45,
+        'hidden_size': 35,
         'number_hidden': 2,
         'frame_size': 16,
         'dropout': 0.5,
