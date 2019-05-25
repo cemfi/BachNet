@@ -9,7 +9,7 @@ from synthesizer import Synthesizer
 from utils.part_to_data_array import PartConverter
 
 # loaded = torch.load('05-23 14-10-lr0.001-g0.9-ls3-hs1115-nh2-fs16-do0.5-1.pt', map_location='cpu')
-loaded = torch.load('05-23 18-30-lr0.0001-g0.95-ls5-hs45-nh2-fs16-do0.5-99.pt', map_location='cpu')
+loaded = torch.load('05-23 21-24-lr0.0003-g0.95-ls5-hs200-nh2-fs16-do0.5-26.pt', map_location='cpu')
 config = loaded['config']
 
 D_in, H, D_out = 279, config['hidden_size'], 62
@@ -23,9 +23,9 @@ model.eval()
 pc = PartConverter()
 data = converter.parse(
 #    './xml test/floskel.musicxml')
-#    './xml test/38 long.musicxml')
+    './xml test/38 long.musicxml')
 #    './xml test/211 schluss.musicxml')   # Kaffeekantate
-    './xml test/05.musicxml')  # bassdurchgänge
+#    './xml test/05.musicxml')  # bassdurchgänge
 #    './xml test/06 sopran.musicxml')   # ausweichungen
 #    './xml test/kirby fsharp fermata.mxl')
 
