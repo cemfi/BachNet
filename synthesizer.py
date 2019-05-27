@@ -80,7 +80,7 @@ class Synthesizer:
                 self.current_ts = time_sig
 
             # duration is always a quaver, could be changed later
-            duration = 0.5
+            duration = 0.25
 
             soprano_note, self.last_s_note_midi = self._make_element_from_midi(soprano_note_midi, self.last_s_note, duration, self.last_s_note_midi, is_fermata)
             alto_note, self.last_a_note_midi = self._make_element_from_midi(alto_note_midi, self.last_a_note, duration, self.last_a_note_midi, is_fermata)

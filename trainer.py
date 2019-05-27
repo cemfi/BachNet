@@ -149,7 +149,7 @@ def train(config):
 if __name__ == '__main__':
     from random import choice, randint
 
-    for hidden_size in [100, 125, 150, 175, 200]:
+    for hidden_size in [20]: #[100, 125, 150, 175, 200]:
         config = {
             'learning_rate': 0.001,
             'learning_gamma': 0.9,

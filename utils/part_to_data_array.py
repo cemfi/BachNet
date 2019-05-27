@@ -190,7 +190,7 @@ class PartConverter:
             self._applyKey(dataIThisBeat, currentKey)
             dataI = np.append(dataI, dataIThisBeat, axis=1)
 
-            sQasQuater += 0.5  # next quaver
+            sQasQuater += 0.25  # next quaver
 
             # save last note for next iteration
             lastSNote = sopranoNoteElement
