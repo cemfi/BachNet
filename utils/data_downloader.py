@@ -1,11 +1,12 @@
 import os
 import datetime
+import random
 
 from music21 import corpus, note
 import numpy as np
 from tqdm import tqdm
 
-from part_to_data_array import PartConverter
+from .part_to_data_array import PartConverter
 
 
 class DataDownloader:
@@ -16,7 +17,7 @@ class DataDownloader:
         self.pathFolder = pathFolder
         self.exceptionLog = []
 
-    def download(self, valPercent=5, piecesMax=100000):
+    def download(self, valPercent=15, piecesMax=100000):
         print("Now Downloading Files. Searching Corpus.")
         # cb = corpus.search('palestrina')
         cb = corpus.search('bach/bwv')
@@ -35,11 +36,6 @@ class DataDownloader:
                 continue
             # bwv248.64-6.mxl #invisible break
 
-            if c <= (len(cb) * (valPercent / 100)):
-                self.datafolderPrefix = self.pathFolder + "/valid/"
-            else:
-                self.datafolderPrefix = self.pathFolder + "/train/"
-
             tqdm.write(title)
 
             dataI, dataO, skipFile, exceptionEntry = pc.convertToDataArray(x, title)
@@ -48,10 +44,18 @@ class DataDownloader:
                 self.exceptionLog.append(exceptionEntry)
                 counterSkipped += 1
                 continue
+            
+            split = random.randint(0, 99)
+            if split < valPercent:
+                self.datafolderPrefix = self.pathFolder + "/valid/"
+                transpositions = [0]
+            else:
+                self.datafolderPrefix = self.pathFolder + "/train/"
+                transpositions = self.transpositionsDataAug
 
             datafolderPiece = self.datafolderPrefix + x.metadata.title
 
-            for tp in self.transpositionsDataAug:
+            for tp in transpositions:
                 nameConcat = datafolderPiece + "_" + str(c) + "_" + str(tp)
                 if skipFile or ((os.path.exists(nameConcat)) and not self.overwrite):
                     break
@@ -81,9 +85,10 @@ class DataDownloader:
                     np.save(fname, data_in_to_file)
                     # if title == "bwv119.9.mxl":     #duration bug
                     # if title == "bwv119.9.mxl":     #duration bug
-                    if c == 2:  # random number for debug
-                        np.savetxt(((self.pathFolder) + "/" + title + "_" + str(c) + "_" + str(tp) + "debugo.csv"), data_out_to_file, fmt='%d')
-                        np.savetxt(((self.pathFolder) + "/" + title + "_" + str(c) + "_" + str(tp) + "debugi.csv"), data_in_to_file, fmt='%d')
+                    
+                    # if c == 2:  # random number for debug
+                        # np.savetxt(((self.pathFolder) + "/" + title + "_" + str(c) + "_" + str(tp) + "debugo.csv"), data_out_to_file, fmt='%d')
+                        # np.savetxt(((self.pathFolder) + "/" + title + "_" + str(c) + "_" + str(tp) + "debugi.csv"), data_in_to_file, fmt='%d')
 
             if self.datafolderPrefix == self.pathFolder + "/train/":
                 cTrain += 1

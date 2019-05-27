@@ -1,3 +1,4 @@
+import math
 import os
 import datetime
 
@@ -9,9 +10,15 @@ from tqdm import tqdm
 
 from dataset import BachDataset
 from model import BachNet
+from utils.data_downloader import DataDownloader
 
 
 def train(config):
+    data_path = os.path.join('.', 'data')
+    if not os.path.exists(data_path):
+        DataDownloader(data_path, transpositions=[-6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5], overwrite=True).download(valPercent=10)
+
+
     date = "{0:%m-%d %H-%M}".format(datetime.datetime.now())
     idString = date + "-lr" + str(config['learning_rate']) + "-g" + str(config['learning_gamma']) +"-ls" + str(config['learning_step']) + "-hs" + str(config['hidden_size']) + "-nh" + str(config['number_hidden']) + "-fs" + str(config['frame_size']) + "-do" + str(config['dropout']) + '-'
     checkpoint_dir = os.path.join('.', 'checkpoints', idString)
@@ -142,16 +149,17 @@ def train(config):
 if __name__ == '__main__':
     from random import choice, randint
 
-    config = {
-        'learning_rate': 0.001,
-        'learning_gamma': 0.9,
-        'learning_step': 3,
-        'hidden_size': 35,
-        'number_hidden': 2,
-        'frame_size': 16,
-        'dropout': 0.5,
-        'number_epochs': 100,
-        'save_checkpoints': True,
-    }
+    for hidden_size in [100, 125, 150, 175, 200]:
+        config = {
+            'learning_rate': 0.001,
+            'learning_gamma': 0.9,
+            'learning_step': 3,
+            'hidden_size': hidden_size,
+            'number_hidden': 2,
+            'frame_size': 16,
+            'dropout': 0.5,
+            'number_epochs': 20,
+            'save_checkpoints': True,
+        }
 
-    train(config)
+        train(config)
