@@ -83,10 +83,6 @@ def train(config):
                     y_pred_B, y_pred_A, y_pred_T, hidden = model(batch, h)
 
                     current_batchsize = y_pred_A[0, :, 0].shape[0]
-                    beforepad = torch.zeros(config['frame_size'], current_batchsize, 8).to(device)          # padding for format
-                    afterpad = torch.zeros(config['frame_size'], current_batchsize, 85).to(device)        # padding for format
-
-                    # y_pred = torch.cat((beforepad, y_pred_B, y_pred_T, y_pred_A, afterpad), 2)
 
                     # loss = criterion(y_pred, labels)
                     b_labels = labels[:, :, 8:70]
@@ -156,7 +152,7 @@ if __name__ == '__main__':
             'learning_step': 3,
             'hidden_size': hidden_size,
             'number_hidden': 2,
-            'frame_size': 16,
+            'frame_size': 32,
             'dropout': 0.5,
             'number_epochs': 20,
             'save_checkpoints': True,

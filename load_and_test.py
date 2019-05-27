@@ -9,7 +9,7 @@ from synthesizer import Synthesizer
 from utils.part_to_data_array import PartConverter
 
 # loaded = torch.load('05-23 14-10-lr0.001-g0.9-ls3-hs1115-nh2-fs16-do0.5-1.pt', map_location='cpu')
-loaded = torch.load('05-27 07-27-lr0.001-g0.9-ls3-hs75-nh2-fs16-do0.5-20 gut.pt', map_location='cpu')
+loaded = torch.load('05-27 15-27-lr0.001-g0.9-ls3-hs20-nh2-fs32-do0.5-1.pt', map_location='cpu')
 config = loaded['config']
 
 D_in, H, D_out = 279, config['hidden_size'], 62
