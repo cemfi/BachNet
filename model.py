@@ -33,12 +33,12 @@ class BachNet(BachBase):
         out_1B = self.fc1b(out)
         out_1B = self.fc2b(F.relu(out_1B))
 
-        out_plusB = torch.cat((out, F.softmax(out_1B, dim=2)), 2)
+        out_plusB = torch.cat((out, torch.argmax(out_1B, 2)), 2)
 
         out_2A = self.fc1a(out_plusB)
         out_2A = self.fc2a(F.relu(out_2A))
 
-        out_plusB_plusA = torch.cat((out_plusB, F.softmax(out_2A, dim=2)), 2)
+        out_plusB_plusA = torch.cat((out_plusB, torch.argmax(out_2A, 2)), 2)
 
         out_3T = self.fc1t(out_plusB_plusA)
         out_3T = self.fc2t(F.relu(out_3T))

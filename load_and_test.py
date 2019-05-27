@@ -9,7 +9,7 @@ from synthesizer import Synthesizer
 from utils.part_to_data_array import PartConverter
 
 # loaded = torch.load('05-23 14-10-lr0.001-g0.9-ls3-hs1115-nh2-fs16-do0.5-1.pt', map_location='cpu')
-loaded = torch.load('05-27 09-54-lr0.001-g0.9-ls3-hs10-nh2-fs16-do0.5-0.pt', map_location='cpu')
+loaded = torch.load('05-27 07-27-lr0.001-g0.9-ls3-hs75-nh2-fs16-do0.5-20 gut.pt', map_location='cpu')
 config = loaded['config']
 
 D_in, H, D_out = 279, config['hidden_size'], 62
@@ -23,11 +23,11 @@ model.eval()
 pc = PartConverter()
 data = converter.parse(
 #    './xml test/floskel.musicxml')
-#    './xml test/38 long.musicxml')
+    './xml test/38 long.musicxml')
 #    './xml test/211 schluss.musicxml')   # Kaffeekantate
 #    './xml test/05.musicxml')  # bassdurchgänge
 #    './xml test/06 sopran.musicxml')   # ausweichungen
-    './xml test/kirby fsharp fermata.mxl')
+#    './xml test/kirby fsharp fermata.mxl')
 
 
 # carefull: no repeats are extended in test-data!
