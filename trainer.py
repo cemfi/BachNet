@@ -1,6 +1,7 @@
 import math
 import os
 import datetime
+from glob import glob
 
 import torch
 from torch.utils.data import DataLoader
@@ -30,7 +31,7 @@ def train(config):
 
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda:0" if use_cuda else "cpu")
-    params = {'batch_size': 50, 'shuffle': True}
+    params = {'batch_size': 500, 'shuffle': True}
 
     # Datasets
     dataloaders = {
@@ -49,12 +50,19 @@ def train(config):
     }
 
     model = BachNet(
-        input_dims=279,
+        input_dims=527,#279,
         hidden_dims=config['hidden_size'],
         output_dims=62,
         num_hidden_layers=config['number_hidden'],
-        dropout=config['dropout']
+        dropout=config['dropout'],
+        device=device,
     ).to(device)
+
+    if 'resume' in config:
+        old = list(glob(os.path.join('.', 'checkpoints', config['resume'], '*.pt')))
+        old.sort()
+        loaded = torch.load(old[-1])
+        model.load_state_dict(loaded['state'])
 
     criterion = torch.nn.CrossEntropyLoss().to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=config['learning_rate'])
@@ -136,16 +144,17 @@ def train(config):
                         1000
                     )
                     writer.add_scalars('loss', {phase: loss.item()}, step)
+                    model.reset_memory()
 
         if config['save_checkpoints']:
             tempName = os.path.join(checkpoint_dir, idString + str(epoch) + ".pt")
             torch.save({'state': model.state_dict(), 'config': config}, tempName)
-
+        
 
 if __name__ == '__main__':
     from random import choice, randint
 
-    for hidden_size in [20]: #[100, 125, 150, 175, 200]:
+    for hidden_size in [64]: #[100, 125, 150, 175, 200]:
         config = {
             'learning_rate': 0.001,
             'learning_gamma': 0.9,
@@ -156,6 +165,7 @@ if __name__ == '__main__':
             'dropout': 0.5,
             'number_epochs': 20,
             'save_checkpoints': True,
+            # 'resume': '05-27 16-33-lr0.001-g0.9-ls3-hs42-nh2-fs32-do0.5-',
         }
 
         train(config)

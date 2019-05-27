@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 
 class BachBase(torch.nn.Module):
-    def __init__(self, input_dims, hidden_dims, output_dims, num_hidden_layers, dropout=0.5):
+    def __init__(self, input_dims, hidden_dims, output_dims, num_hidden_layers, device, dropout=0.5):
         super(BachBase, self).__init__()
         self.num_hidden_layers = num_hidden_layers
         self.hidden_dims = hidden_dims
@@ -17,6 +17,15 @@ class BachBase(torch.nn.Module):
         self.fc2b = torch.nn.Linear(hidden_dims, output_dims)
         self.fc2a = torch.nn.Linear(hidden_dims, output_dims)
         self.fc2t = torch.nn.Linear(hidden_dims, output_dims)
+        
+        self.device = device
+        
+        self.lastB = None
+        self.lastA = None
+        self.lastT = None
+        self.lastS = None
+
+        self.new_batch = True
 
     def init_hidden(self, n_seqs):
         """Initializes hidden state"""
@@ -26,7 +35,15 @@ class BachBase(torch.nn.Module):
 
 class BachNet(BachBase):
     def forward(self, x, hidden):
-        out, hidden = self.gru1(x, hidden)
+        if self.new_batch:
+            self.lastB = torch.zeros((x.shape[0], x.shape[1], 62)).to(self.device)
+            self.lastA = torch.zeros((x.shape[0], x.shape[1], 62)).to(self.device)
+            self.lastT = torch.zeros((x.shape[0], x.shape[1], 62)).to(self.device)
+            self.lastS = torch.zeros((x.shape[0], x.shape[1], 62)).to(self.device)
+            self.new_batch = False
+
+        out = torch.cat((x, self.lastB, self.lastA, self.lastT, self.lastS), 2)
+        out, hidden = self.gru1(out, hidden)
         out, hidden = self.gru2(out, hidden)
         out = self.dropout1(out)
 
@@ -48,7 +65,19 @@ class BachNet(BachBase):
 
         out_3T = self.fc1t(out_plusB_plusA)
         out_3T = self.fc2t(F.relu(out_3T))
+
+        tenornote = torch.max(out_3T, dim=2)[1]
+        tenornote = torch.nn.functional.one_hot(tenornote, 62).float()
+
+        self.lastB = bassnote
+        self.lastA = altonote
+        self.lastT = tenornote
+        self.lastS = x[:,:,194:256]
+
         return out_1B, out_2A, out_3T, hidden
+    
+    def reset_memory(self):
+        self.new_batch = True
 
 
 class AnalysisNet(BachBase):
