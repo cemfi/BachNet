@@ -9,11 +9,15 @@ from synthesizer import Synthesizer
 from utils.part_to_data_array import PartConverter
 
 # loaded = torch.load('05-23 14-10-lr0.001-g0.9-ls3-hs1115-nh2-fs16-do0.5-1.pt', map_location='cpu')
-loaded = torch.load('05-27 15-27-lr0.001-g0.9-ls3-hs20-nh2-fs32-do0.5-1.pt', map_location='cpu')
+loaded = torch.load('05-27 18-41-lr0.001-g0.9-ls3-hs100-nh2-fs32-do0.5-2.pt', map_location='cpu')
 config = loaded['config']
 
-D_in, H, D_out = 279, config['hidden_size'], 62
-model = BachNet(D_in, H, D_out, 2)
+D_in, H, D_out = 527, config['hidden_size'], 62
+
+use_cuda = torch.cuda.is_available()
+device = torch.device("cuda:0" if use_cuda else "cpu")
+
+model = BachNet(D_in, H, D_out, 2, device=device)
 
 # gut:
 # model.load_state_dict(torch.load('04-30 14-46-lr0.001-g0.9-hs1002-nh2-fs21-do0.5-22.pt', map_location='cpu'))
@@ -24,10 +28,12 @@ pc = PartConverter()
 data = converter.parse(
 #    './xml test/floskel.musicxml')
     './xml test/38 long.musicxml')
-#    './xml test/211 schluss.musicxml')   # Kaffeekantate
 #    './xml test/05.musicxml')  # bassdurchgänge
 #    './xml test/06 sopran.musicxml')   # ausweichungen
 #    './xml test/kirby fsharp fermata.mxl')
+
+#    './xml test/old/mond-B-Bks.musicxml')  # Kaffeekantate
+#    './xml test/alternative/211 schluss.musicxml')   # Kaffeekantate
 
 
 # carefull: no repeats are extended in test-data!
