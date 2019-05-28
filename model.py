@@ -11,9 +11,9 @@ class BachBase(torch.nn.Module):
         self.gru1 = torch.nn.GRU(input_size=input_dims, num_layers=1, hidden_size=hidden_dims, bidirectional=True)
         self.gru2 = torch.nn.GRU(input_size=hidden_dims * 2, num_layers=1, hidden_size=hidden_dims, bidirectional=True)
         self.dropout1 = torch.nn.Dropout(dropout)
-        self.fc1b = torch.nn.Linear(hidden_dims * 2, hidden_dims)
-        self.fc1a = torch.nn.Linear(hidden_dims * 2 + output_dims, hidden_dims)
-        self.fc1t = torch.nn.Linear(hidden_dims * 2 + output_dims * 2, hidden_dims)
+        self.fc1b = torch.nn.Linear(hidden_dims * 2+248, hidden_dims)
+        self.fc1a = torch.nn.Linear(hidden_dims * 2 + output_dims+248, hidden_dims)
+        self.fc1t = torch.nn.Linear(hidden_dims * 2 + output_dims * 2+248, hidden_dims)
         self.fc2b = torch.nn.Linear(hidden_dims, output_dims)
         self.fc2a = torch.nn.Linear(hidden_dims, output_dims)
         self.fc2t = torch.nn.Linear(hidden_dims, output_dims)
@@ -42,10 +42,11 @@ class BachNet(BachBase):
             self.lastS = torch.zeros((x.shape[0], x.shape[1], 62)).to(self.device)
             self.new_batch = False
 
-        out = torch.cat((x, self.lastB, self.lastA, self.lastT, self.lastS), 2)
-        out, hidden = self.gru1(out, hidden)
+        out, hidden = self.gru1(x, hidden)
         out, hidden = self.gru2(out, hidden)
         out = self.dropout1(out)
+
+        out = torch.cat((out, self.lastB, self.lastA, self.lastT, self.lastS), 2)
 
         out_1B = self.fc1b(out)
         out_1B = self.fc2b(F.relu(out_1B))

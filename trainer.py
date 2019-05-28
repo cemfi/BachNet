@@ -50,7 +50,7 @@ def train(config):
     }
 
     model = BachNet(
-        input_dims=527,#279,
+        input_dims=279,
         hidden_dims=config['hidden_size'],
         output_dims=62,
         num_hidden_layers=config['number_hidden'],
@@ -154,7 +154,7 @@ def train(config):
 if __name__ == '__main__':
     from random import choice, randint
 
-    for hidden_size in [64]: #[100, 125, 150, 175, 200]:
+    for hidden_size in [200]: #[100, 125, 150, 175, 200]:
         config = {
             'learning_rate': 0.001,
             'learning_gamma': 0.9,
@@ -163,7 +163,7 @@ if __name__ == '__main__':
             'number_hidden': 2,
             'frame_size': 32,
             'dropout': 0.5,
-            'number_epochs': 20,
+            'number_epochs': 50,
             'save_checkpoints': True,
             # 'resume': '05-27 16-33-lr0.001-g0.9-ls3-hs42-nh2-fs32-do0.5-',
         }
