@@ -1,8 +1,6 @@
 .DS_Store
-/chordDataSQ
-/results
-/runs
-/xml test
 /.idea
+
+/checkpoints
+/runs
 /data
-/old
