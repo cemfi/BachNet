@@ -17,13 +17,14 @@ def main(config_passed):
     config = {
         'num_epochs': 100,
         'batch_size': 256,
+        'hidden_size': 300,
         'use_cuda': True,
         'num_workers': 4,
         'lr': 0.001,
         'lr_step_size': 20,
         'lr_gamma': 0.95,
         'time_grid': 0.25,
-        'context_radius': 32,
+        'context_radius': 16,
         'checkpoint_root_dir': os.path.join('.', 'checkpoints'),
         'checkpoint_interval': None,
         'log_interval': 10
@@ -57,7 +58,7 @@ def main(config_passed):
     )
 
     logging.debug('Creating model...')
-    model = BachNet(data_loaders['input_size'], data_loaders['output_sizes']).to(device)
+    model = BachNet(data_loaders['input_size'], data_loaders['output_sizes'], config.hidden_size).to(device)
     params = [p for p in model.parameters() if p.requires_grad]
     optimizer = torch.optim.Adam(params, lr=config.lr)
     lr_scheduler = torch.optim.lr_scheduler.StepLR(
@@ -74,8 +75,8 @@ def main(config_passed):
 
             for batch_idx, batch in enumerate(data_loaders[phase]):
                 inputs, targets = batch
-                inputs = torch.cat([v for v in inputs.values()], dim=2).to(device)
-                # inputs = {k: v.to(device) for k, v in inputs.items()}
+                # inputs = torch.cat([v for v in inputs.values()], dim=2).to(device)
+                inputs = {k: v.to(device) for k, v in inputs.items()}
 
                 with torch.set_grad_enabled(phase == 'train'):
                     predictions = model(inputs)
@@ -105,9 +106,13 @@ def main(config_passed):
 
 if __name__ == '__main__':
     config = {
-        'num_epochs': 100,
-        'batch_size': 1024,
+        'num_epochs': 10000,
+        'batch_size': 512,
+        'hidden_size': 500,
         'context_radius': 32,
-        'checkpoint_interval': 5
+        'lr': 0.001,
+        'lr_step_size': 50,
+        'log_interval': 1,
+        # 'checkpoint_interval': 5
     }
     main(config)
