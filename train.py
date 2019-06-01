@@ -16,7 +16,7 @@ from model import BachNet
 def main(config_passed):
     config = {
         'num_epochs': 100,
-        'batch_size': 1024,
+        'batch_size': 256,
         'use_cuda': True,
         'num_workers': 4,
         'lr': 0.001,
@@ -87,7 +87,7 @@ def main(config_passed):
                         loss.backward()
                         optimizer.step()
 
-                if batch_idx % config.log_interval == 0:
+                if batch_idx % config.log_interval == 0 or len(data_loaders[phase]) / config.batch_size < config.log_interval:
                     step = int((float(epoch) + (batch_idx / len(data_loaders[phase]))) * 1000)
                     writer.add_scalars('loss', {phase: loss.item()}, step)
 
