@@ -23,13 +23,13 @@ def main(config_passed):
         'lr_step_size': 20,
         'lr_gamma': 0.95,
         'time_grid': 0.25,
-        'context_radius': 16,
+        'context_radius': 32,
         'checkpoint_root_dir': os.path.join('.', 'checkpoints'),
         'checkpoint_interval': None
     }
 
     # Save deviations from default config as string for logging
-    config_string = ' '.join([f'{k}={v}' for k, v in config_passed.items() if v != config[k] and k != 'checkpoint_interval'])
+    config_string = ' '.join([f'{k}={v}' for k, v in config_passed.items() if v != config[k] and k != 'checkpoint_interval']).strip()
 
     # Update default config with passed parameters
     config.update(config_passed)
