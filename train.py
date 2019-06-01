@@ -92,7 +92,7 @@ def main(config_passed):
 
         if config.checkpoint_interval is not None and (epoch + 1) % config.checkpoint_interval == 0:
             os.makedirs(checkpoint_dir, exist_ok=True)
-            checkpoint_path = os.path.join(checkpoint_dir, f'{config_string} epoch={str(epoch + 1).zfill(4)}.pt')
+            checkpoint_path = os.path.join(checkpoint_dir, f'{str(epoch + 1).zfill(4)} {config_string}.pt')
             torch.save({
                 'config': config,
                 'state': model.state_dict(),
@@ -103,9 +103,9 @@ def main(config_passed):
 if __name__ == '__main__':
     config = {
         'num_epochs': 500,
-        'batch_size': 500,
+        'batch_size': 512,
         'num_workers': 1,
-        'context_radius': 16,
+        'context_radius': 32,
         'checkpoint_interval': 5
     }
     main(config)
