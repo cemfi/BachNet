@@ -74,8 +74,8 @@ def main(config_passed):
 
             for batch_idx, batch in enumerate(data_loaders[phase]):
                 inputs, targets = batch
-                inputs = torch.cat([v for v in inputs.values()], dim=2)
-                inputs = inputs.to(device)
+                inputs = torch.cat([v for v in inputs.values()], dim=2).to(device)
+                # inputs = {k: v.to(device) for k, v in inputs.items()}
 
                 with torch.set_grad_enabled(phase == 'train'):
                     predictions = model(inputs)
