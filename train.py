@@ -15,10 +15,10 @@ from model import BachNet
 
 def main(config_passed):
     config = {
-        'num_epochs': 10,
-        'batch_size': 1,
+        'num_epochs': 100,
+        'batch_size': 1024,
         'use_cuda': True,
-        'num_workers': 1,
+        'num_workers': 4,
         'lr': 0.001,
         'lr_step_size': 20,
         'lr_gamma': 0.95,
@@ -29,7 +29,7 @@ def main(config_passed):
     }
 
     # Save deviations from default config as string for logging
-    config_string = ' '.join([f'{k}={v}' for k, v in config_passed.items() if v != config[k] and v != 'checkpoint_interval'])
+    config_string = ' '.join([f'{k}={v}' for k, v in config_passed.items() if v != config[k] and k != 'checkpoint_interval'])
 
     # Update default config with passed parameters
     config.update(config_passed)
@@ -102,9 +102,9 @@ def main(config_passed):
 
 if __name__ == '__main__':
     config = {
-        'num_epochs': 500,
-        'batch_size': 512,
-        'num_workers': 1,
+        'num_epochs': 100,
+        'batch_size': 1024,
+        'num_workers': 4,
         'context_radius': 32,
         'checkpoint_interval': 5
     }
