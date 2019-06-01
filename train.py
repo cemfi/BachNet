@@ -29,7 +29,8 @@ def main(config_passed):
     }
 
     # Save deviations from default config as string for logging
-    config_string = ' '.join([f'{k}={v}' for k, v in config_passed.items() if v != config[k] and k != 'checkpoint_interval']).strip()
+    blacklist = ['checkpoint_root_dir', 'checkpoint_interval', 'use_cuda', 'num_epochs', 'num_workers']
+    config_string = ' '.join([f'{k}={v}' for k, v in config_passed.items() if k not in blacklist]).strip()
 
     # Update default config with passed parameters
     config.update(config_passed)
@@ -104,7 +105,6 @@ if __name__ == '__main__':
     config = {
         'num_epochs': 100,
         'batch_size': 1024,
-        'num_workers': 4,
         'context_radius': 32,
         'checkpoint_interval': 5
     }
