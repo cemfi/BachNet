@@ -35,11 +35,11 @@ class ChoralesDataset(Dataset):
 
         # Make empty intros for each part
         self.data = EasyDict({
-            'soprano': [torch.zeros((context_radius, 60 + len(indices_parts)), dtype=torch.int8)],
-            'tenor': [torch.zeros((context_radius, 60 + len(indices_parts)), dtype=torch.int8)],
-            'alto': [torch.zeros((context_radius, 60 + len(indices_parts)), dtype=torch.int8)],
-            'bass': [torch.zeros((context_radius, 60 + len(indices_parts)), dtype=torch.int8)],
-            'extra': [torch.zeros((context_radius, len(indices_extra)), dtype=torch.int8)]
+            'soprano': [torch.zeros((context_radius, 60 + len(indices_parts)))],
+            'tenor': [torch.zeros((context_radius, 60 + len(indices_parts)))],
+            'alto': [torch.zeros((context_radius, 60 + len(indices_parts)))],
+            'bass': [torch.zeros((context_radius, 60 + len(indices_parts)))],
+            'extra': [torch.zeros((context_radius, len(indices_extra)))]
         })
 
         # Concat all pieces into large tensors for each part
@@ -47,7 +47,7 @@ class ChoralesDataset(Dataset):
             data = torch.load(file_path)['data']
             for part_name, part_data in data.items():
                 self.data[part_name].append(
-                    torch.cat((part_data, torch.zeros((context_radius, part_data.shape[1]), dtype=torch.int8)), dim=0))
+                    torch.cat((part_data, torch.zeros((context_radius, part_data.shape[1]))), dim=0))
         for part_name, part_data in self.data.items():
             self.data[part_name] = torch.cat(self.data[part_name], dim=0).float()
 
@@ -100,11 +100,11 @@ def _generate_data(time_grid, root_dir, overwrite, split):
 
         length = math.ceil(streams['soprano'].highestTime / time_grid)
         data = EasyDict({
-            'extra': torch.zeros((length, len(indices_extra)), dtype=torch.int8)
+            'extra': torch.zeros((length, len(indices_extra)))
         })
         for part_name, part in streams.items():
             # Init empty tensor for current voice
-            data[part_name] = torch.zeros((length, 60 + len(indices_parts)), dtype=torch.int8)
+            data[part_name] = torch.zeros((length, 60 + len(indices_parts)))
 
             # Iterate through all musical elements in current voice stream
             for element in part:
@@ -126,6 +126,10 @@ def _generate_data(time_grid, root_dir, overwrite, split):
                     if part_name == 'soprano' and any([type(e) == Fermata for e in element.expressions]):
                         data.extra[offset, indices_extra.has_fermata] = 1
 
+                    # Save position ("beat") in measure
+                    if part_name == 'soprano':
+                        data.extra[offset, indices_extra.time_pos] = element.beat
+
                 if type(element) == Rest:
                     duration = int(element.duration.quarterLength / time_grid)
                     data[part_name][offset, indices_parts.is_rest] = 1
@@ -139,8 +143,6 @@ def _generate_data(time_grid, root_dir, overwrite, split):
 
                     if type(element) == KeySignature or type(element) == Key:
                         data.extra[offset:, indices_extra.num_sharps] = element.sharps
-
-                # TODO: time_pos
 
         target_file_path = os.path.join(target_dir, f'{chorale.metadata.number}.pt')
         torch.save({
