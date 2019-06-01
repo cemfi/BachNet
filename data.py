@@ -203,10 +203,3 @@ def get_data_loaders(time_grid=0.25, root_dir=None, overwrite=False, split=0.15,
     data_dir = _generate_data(time_grid=time_grid, root_dir=root_dir, overwrite=overwrite, split=split)
     data_loaders = _make_data_loaders(data_dir, batch_size=batch_size, num_workers=num_workers, context_radius=context_radius)
     return EasyDict(data_loaders)
-
-
-if __name__ == '__main__':
-    data_loaders = get_data_loaders(time_grid=0.25, split=0.15, context_radius=16)
-    print(len(data_loaders.test))
-    # for batch in tqdm(data_loaders['test']):
-    #     print(batch)
