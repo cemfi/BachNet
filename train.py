@@ -13,8 +13,8 @@ import data
 from model import BachNet
 
 
-def main(config):
-    default_config = {
+def main(config_passed):
+    config = {
         'num_epochs': 10,
         'batch_size': 1,
         'use_cuda': True,
@@ -28,12 +28,12 @@ def main(config):
         'checkpoint_interval': None
     }
 
-    # Save deviations from default config for logging
-    config_string = ' '.join([f'{k}={v}' for k, v in config.items() if v != default_config[k]])
+    # Save deviations from default config as string for logging
+    config_string = ' '.join([f'{k}={v}' for k, v in config_passed.items() if v != config[k] and v != 'checkpoint_interval'])
 
     # Update default config with passed parameters
-    default_config.update(config)
-    config = EasyDict(default_config)
+    config.update(config_passed)
+    config = EasyDict(config)
 
     date = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     checkpoint_dir = os.path.join(config.checkpoint_root_dir, f'{date} {config_string}')

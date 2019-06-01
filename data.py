@@ -33,6 +33,7 @@ class ChoralesDataset(Dataset):
         self.root_dir = root_dir
         self.context_radius = context_radius
 
+        # Make empty intros for each part
         self.data = EasyDict({
             'soprano': [torch.zeros((context_radius, 60 + len(indices_parts)), dtype=torch.int8)],
             'tenor': [torch.zeros((context_radius, 60 + len(indices_parts)), dtype=torch.int8)],
@@ -41,12 +42,12 @@ class ChoralesDataset(Dataset):
             'extra': [torch.zeros((context_radius, len(indices_extra)), dtype=torch.int8)]
         })
 
+        # Concat all pieces into large tensors for each part
         for file_path in glob(os.path.join(self.root_dir, '*.pt')):
             data = torch.load(file_path)['data']
             for part_name, part_data in data.items():
                 self.data[part_name].append(
                     torch.cat((part_data, torch.zeros((context_radius, part_data.shape[1]), dtype=torch.int8)), dim=0))
-
         for part_name, part_data in self.data.items():
             self.data[part_name] = torch.cat(self.data[part_name], dim=0).float()
 
@@ -54,6 +55,7 @@ class ChoralesDataset(Dataset):
         return self.data.soprano.shape[0] - 2 * self.context_radius
 
     def __getitem__(self, idx):
+        # Return windowed parts from dataset for training and one hot vectors as targets
         return {
                    'soprano': self.data.soprano[idx:idx + 2 * self.context_radius + 1],
                    'alto': torch.cat((self.data.alto[idx:idx + self.context_radius], torch.zeros((self.context_radius + 1, 60 + len(indices_parts))))),
@@ -200,6 +202,19 @@ def _make_data_loaders(root_dir, batch_size, num_workers, context_radius):
 def get_data_loaders(time_grid=0.25, root_dir=None, overwrite=False, split=0.15, batch_size=1, num_workers=1, context_radius=16):
     if root_dir is None:
         root_dir = os.path.join('.', 'data')
-    data_dir = _generate_data(time_grid=time_grid, root_dir=root_dir, overwrite=overwrite, split=split)
-    data_loaders = _make_data_loaders(data_dir, batch_size=batch_size, num_workers=num_workers, context_radius=context_radius)
+
+    data_dir = _generate_data(
+        time_grid=time_grid,
+        root_dir=root_dir,
+        overwrite=overwrite,
+        split=split
+    )
+
+    data_loaders = _make_data_loaders(
+        data_dir,
+        batch_size=batch_size,
+        num_workers=num_workers,
+        context_radius=context_radius
+    )
+
     return EasyDict(data_loaders)
