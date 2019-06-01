@@ -87,10 +87,6 @@ def main(config_passed):
                     predictions = model(inputs)
                     losses = {k: criterion(predictions[k], targets[k].to(device)) for k in targets.keys()}
                     loss = sum(losses.values())
-                    # print([l.item() for l in losses.values()])
-                    # print(targets['bass'])
-                    # print(predictions['bass'])
-                    # exit()
 
                     if phase == 'train':
                         optimizer.zero_grad()
@@ -115,12 +111,12 @@ def main(config_passed):
 
 if __name__ == '__main__':
     config = {
-        'num_epochs': 10000,
-        'batch_size': 256,
-        'hidden_size': 5000,
+        'num_epochs': 200,
+        'batch_size': 128,
+        'hidden_size': 2000,
         'context_radius': 32,
-        'lr': 0.001,
-        'lr_step_size': 50,
+        'lr': 0.003,
+        'lr_step_size': 500,
         'log_interval': 1,
         # 'checkpoint_interval': 5
     }
