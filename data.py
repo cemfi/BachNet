@@ -56,6 +56,7 @@ class ChoralesDataset(Dataset):
 
     def __getitem__(self, idx):
         # Return windowed parts from dataset for training and one hot vectors as targets
+        # "Future" of A+T+B is filled with zeros
         return {
                    'soprano': self.data.soprano[idx:idx + 2 * self.context_radius + 1],
                    'alto': torch.cat((self.data.alto[idx:idx + self.context_radius], torch.zeros((self.context_radius + 1, 60 + len(indices_parts))))),
@@ -88,7 +89,6 @@ def _generate_data(time_grid, root_dir, overwrite, split):
 
         # Skip if parts do not contain correct choral voices
         try:
-            # Expand repetitions
             streams = {
                 'soprano': chorale['Soprano'].flat,
                 'alto': chorale['Alto'].flat,
