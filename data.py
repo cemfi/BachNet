@@ -27,6 +27,8 @@ indices_extra = EasyDict({
     'time_pos': 4
 })
 
+pitch_size = 60
+
 
 class ChoralesDataset(Dataset):
     def __init__(self, root_dir, context_radius=32):
@@ -35,10 +37,10 @@ class ChoralesDataset(Dataset):
 
         # Make empty intros for each part
         self.data = EasyDict({
-            'soprano': [torch.zeros((context_radius, 60 + len(indices_parts)))],
-            'tenor': [torch.zeros((context_radius, 60 + len(indices_parts)))],
-            'alto': [torch.zeros((context_radius, 60 + len(indices_parts)))],
-            'bass': [torch.zeros((context_radius, 60 + len(indices_parts)))],
+            'soprano': [torch.zeros((context_radius, pitch_size + len(indices_parts)))],
+            'tenor': [torch.zeros((context_radius, pitch_size + len(indices_parts)))],
+            'alto': [torch.zeros((context_radius, pitch_size + len(indices_parts)))],
+            'bass': [torch.zeros((context_radius, pitch_size + len(indices_parts)))],
             'extra': [torch.zeros((context_radius, len(indices_extra)))]
         })
 
@@ -56,17 +58,16 @@ class ChoralesDataset(Dataset):
 
     def __getitem__(self, idx):
         # Return windowed parts from dataset for training and one hot vectors as targets
-        # "Future" of A+T+B is filled with zeros
         return {
                    'soprano': self.data.soprano[idx:idx + 2 * self.context_radius + 1],
-                   'alto': torch.cat((self.data.alto[idx:idx + self.context_radius], torch.zeros((self.context_radius + 1, 60 + len(indices_parts))))),
-                   'tenor': torch.cat((self.data.tenor[idx:idx + self.context_radius], torch.zeros((self.context_radius + 1, 60 + len(indices_parts))))),
-                   'bass': torch.cat((self.data.bass[idx:idx + self.context_radius], torch.zeros((self.context_radius + 1, 60 + len(indices_parts))))),
+                   'alto': self.data.alto[idx:idx + self.context_radius],
+                   'tenor': self.data.tenor[idx:idx + self.context_radius],
+                   'bass': self.data.bass[idx:idx + self.context_radius],
                    'extra': self.data.extra[idx:idx + 2 * self.context_radius + 1]
                }, {
-                   'alto': self.data.alto[idx + self.context_radius + 1].long(),
-                   'tenor': self.data.tenor[idx + self.context_radius + 1].long(),
-                   'bass': self.data.bass[idx + self.context_radius + 1].long()
+                   'alto': torch.argmax(self.data.alto[idx + self.context_radius + 1]),
+                   'tenor': torch.argmax(self.data.tenor[idx + self.context_radius + 1]),
+                   'bass': torch.argmax(self.data.bass[idx + self.context_radius + 1])
                }
 
 
@@ -104,7 +105,7 @@ def _generate_data(time_grid, root_dir, overwrite, split):
         })
         for part_name, part in streams.items():
             # Init empty tensor for current voice
-            data[part_name] = torch.zeros((length, 60 + len(indices_parts)))
+            data[part_name] = torch.zeros((length, pitch_size + len(indices_parts)))
 
             # Iterate through all musical elements in current voice stream
             for element in part:
@@ -115,7 +116,7 @@ def _generate_data(time_grid, root_dir, overwrite, split):
                     if element.duration.quarterLength == 0:
                         continue
 
-                    pitch = element.pitch.midi - 30 + len(indices_parts)
+                    pitch = element.pitch.midi - pitch_size//2 + len(indices_parts)
                     duration = int(element.duration.quarterLength / time_grid)
 
                     # Store pitch and ties
@@ -170,7 +171,7 @@ def _make_data_loaders(root_dir, batch_size, num_workers, context_radius):
     )
     train_sampler = RandomSampler(train_dataset)
     train_batch_sampler = BatchSampler(
-        train_sampler, batch_size, drop_last=False
+        train_sampler, batch_size, drop_last=True
     )
     train_data_loader = DataLoader(
         train_dataset,
@@ -185,7 +186,7 @@ def _make_data_loaders(root_dir, batch_size, num_workers, context_radius):
     )
     test_sampler = SequentialSampler(test_dataset)
     test_batch_sampler = BatchSampler(
-        test_sampler, batch_size, drop_last=False
+        test_sampler, batch_size, drop_last=True
     )
     test_data_loader = DataLoader(
         test_dataset,
@@ -196,8 +197,8 @@ def _make_data_loaders(root_dir, batch_size, num_workers, context_radius):
     return {
         'train': train_data_loader,
         'test': test_data_loader,
-        'input_size': (60 + len(indices_parts)) * 4 + len(indices_extra),
-        'output_sizes': (60 + len(indices_parts))
+        'input_size': (pitch_size + len(indices_parts)) * 4 + len(indices_extra),
+        'output_sizes': (pitch_size + len(indices_parts))
     }
 
 

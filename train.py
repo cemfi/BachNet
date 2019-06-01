@@ -58,7 +58,12 @@ def main(config_passed):
     )
 
     logging.debug('Creating model...')
-    model = BachNet(data_loaders['input_size'], data_loaders['output_sizes'], config.hidden_size).to(device)
+    model = BachNet(
+        batch_size=config.batch_size,
+        output_sizes=data_loaders['output_sizes'],
+        hidden_size=config.hidden_size,
+        context_radius=config.context_radius
+    ).to(device)
     params = [p for p in model.parameters() if p.requires_grad]
     optimizer = torch.optim.Adam(params, lr=config.lr)
     lr_scheduler = torch.optim.lr_scheduler.StepLR(
@@ -82,6 +87,10 @@ def main(config_passed):
                     predictions = model(inputs)
                     losses = {k: criterion(predictions[k], targets[k].to(device)) for k in targets.keys()}
                     loss = sum(losses.values())
+                    # print([l.item() for l in losses.values()])
+                    # print(targets['bass'])
+                    # print(predictions['bass'])
+                    # exit()
 
                     if phase == 'train':
                         optimizer.zero_grad()
@@ -107,8 +116,8 @@ def main(config_passed):
 if __name__ == '__main__':
     config = {
         'num_epochs': 10000,
-        'batch_size': 512,
-        'hidden_size': 500,
+        'batch_size': 256,
+        'hidden_size': 5000,
         'context_radius': 32,
         'lr': 0.001,
         'lr_step_size': 50,
