@@ -25,11 +25,12 @@ def main(config_passed):
         'time_grid': 0.25,
         'context_radius': 32,
         'checkpoint_root_dir': os.path.join('.', 'checkpoints'),
-        'checkpoint_interval': None
+        'checkpoint_interval': None,
+        'log_interval': 10
     }
 
     # Save deviations from default config as string for logging
-    blacklist = ['checkpoint_root_dir', 'checkpoint_interval', 'use_cuda', 'num_epochs', 'num_workers']
+    blacklist = ['checkpoint_root_dir', 'checkpoint_interval', 'use_cuda', 'num_epochs', 'num_workers', 'log_interval']
     config_string = ' '.join([f'{k}={v}' for k, v in config_passed.items() if k not in blacklist]).strip()
 
     # Update default config with passed parameters
@@ -86,8 +87,9 @@ def main(config_passed):
                         loss.backward()
                         optimizer.step()
 
-                step = int((float(epoch) + (batch_idx / len(data_loaders[phase]))) * 1000)
-                writer.add_scalars('loss', {phase: loss.item()}, step)
+                if batch_idx % config.log_interval == 0:
+                    step = int((float(epoch) + (batch_idx / len(data_loaders[phase]))) * 1000)
+                    writer.add_scalars('loss', {phase: loss.item()}, step)
 
         lr_scheduler.step()
 

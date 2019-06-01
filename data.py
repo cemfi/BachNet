@@ -29,7 +29,7 @@ indices_extra = EasyDict({
 
 
 class ChoralesDataset(Dataset):
-    def __init__(self, root_dir, context_radius=16):
+    def __init__(self, root_dir, context_radius=32):
         self.root_dir = root_dir
         self.context_radius = context_radius
 
