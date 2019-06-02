@@ -6,6 +6,7 @@ from glob import glob
 
 import torch
 from easydict import EasyDict
+from music21 import converter
 from music21.corpus import chorales
 from music21.expressions import Fermata
 from music21.key import KeySignature, Key
@@ -65,13 +66,63 @@ class ChoralesDataset(Dataset):
                    'bass': self.data.bass[idx:idx + self.context_radius],
                    'extra': self.data.extra[idx:idx + 2 * self.context_radius + 1]
                }, {
-                   'alto': torch.argmax(self.data.alto[idx + self.context_radius + 1]),
-                   'tenor': torch.argmax(self.data.tenor[idx + self.context_radius + 1]),
-                   'bass': torch.argmax(self.data.bass[idx + self.context_radius + 1])
+                   'alto': torch.argmax(self.data.alto[idx + self.context_radius]),
+                   'tenor': torch.argmax(self.data.tenor[idx + self.context_radius]),
+                   'bass': torch.argmax(self.data.bass[idx + self.context_radius])
                }
 
 
-def _generate_data(time_grid, root_dir, overwrite, split):
+def generate_data_inference(time_grid, soprano_path):
+    stream = converter.parse(soprano_path).flat
+    length = math.ceil(stream.highestTime / time_grid)
+    data = EasyDict({
+        'extra': torch.zeros((length, len(indices_extra)))
+    })
+
+    data['soprano'] = torch.zeros((length, pitch_size + len(indices_parts)))
+
+    # Iterate through all musical elements in current voice stream
+    for element in stream:
+        offset = int(element.offset / time_grid)
+
+        if type(element) == Note:
+            # Skip grace notes
+            if element.duration.quarterLength == 0:
+                continue
+
+            pitch = element.pitch.midi - pitch_size // 2 + len(indices_parts)
+            duration = int(element.duration.quarterLength / time_grid)
+
+            # Store pitch and ties
+            data.soprano[offset, pitch] = 1
+            data.soprano[offset + 1:offset + duration, indices_parts.is_continued] = 1
+
+            # Fermata
+            if any([type(e) == Fermata for e in element.expressions]):
+                data.extra[offset, indices_extra.has_fermata] = 1
+
+            # Save position ("beat") in measure
+            data.extra[offset, indices_extra.time_pos] = element.beat
+
+        if type(element) == Rest:
+            duration = int(element.duration.quarterLength / time_grid)
+            data.soprano[offset, indices_parts.is_rest] = 1
+            data.soprano[offset + 1:offset + duration, indices_parts.is_continued] = 1
+
+        if type(element) == TimeSignature:
+            data.extra[offset:, indices_extra.time_numerator] = element.numerator
+            data.extra[offset:, indices_extra.time_denominator] = element.denominator
+
+        if type(element) == KeySignature or type(element) == Key:
+            data.extra[offset:, indices_extra.num_sharps] = element.sharps
+
+    return {
+        'data': data,
+        'metadata': stream.metadata
+    }
+
+
+def _generate_data_training(time_grid, root_dir, overwrite, split):
     target_dir = os.path.join(root_dir, f'time_grid={time_grid} split={split}')
 
     if os.path.exists(target_dir) and not overwrite:
@@ -79,9 +130,11 @@ def _generate_data(time_grid, root_dir, overwrite, split):
 
     train_dir = os.path.join(target_dir, 'train')
     test_dir = os.path.join(target_dir, 'test')
+    musicxml_dir = os.path.join(root_dir, 'musicxml')
 
     os.makedirs(train_dir, exist_ok=True)
     os.makedirs(test_dir, exist_ok=True)
+    os.makedirs(musicxml_dir, exist_ok=True)
 
     for chorale in tqdm(chorales.Iterator(returnType='stream'), unit='chorales', desc='Generating dataset'):
         # Skip chorales with more or less than 4 parts
@@ -116,7 +169,7 @@ def _generate_data(time_grid, root_dir, overwrite, split):
                     if element.duration.quarterLength == 0:
                         continue
 
-                    pitch = element.pitch.midi - pitch_size//2 + len(indices_parts)
+                    pitch = element.pitch.midi - pitch_size // 2 + len(indices_parts)
                     duration = int(element.duration.quarterLength / time_grid)
 
                     # Store pitch and ties
@@ -145,11 +198,14 @@ def _generate_data(time_grid, root_dir, overwrite, split):
                     if type(element) == KeySignature or type(element) == Key:
                         data.extra[offset:, indices_extra.num_sharps] = element.sharps
 
-        target_file_path = os.path.join(target_dir, f'{chorale.metadata.number}.pt')
+        target_file_path = os.path.join(target_dir, f'{str(chorale.metadata.number).zfill(3)}.pt')
         torch.save({
             'data': data,
             'title': chorale.metadata.title
         }, target_file_path)
+
+        chorale.write('musicxml', os.path.join(musicxml_dir, f'{str(chorale.metadata.number).zfill(3)}_full.musicxml'))
+        chorale['Soprano'].write('musicxml', os.path.join(musicxml_dir, f'{str(chorale.metadata.number).zfill(3)}_soprano.musicxml'))
 
     # Move files to train / test directories
     file_paths = glob(os.path.join(target_dir, '*.pt'))
@@ -206,7 +262,7 @@ def get_data_loaders(time_grid=0.25, root_dir=None, overwrite=False, split=0.15,
     if root_dir is None:
         root_dir = os.path.join('.', 'data')
 
-    data_dir = _generate_data(
+    data_dir = _generate_data_training(
         time_grid=time_grid,
         root_dir=root_dir,
         overwrite=overwrite,
