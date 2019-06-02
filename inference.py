@@ -1,6 +1,6 @@
-from datetime import datetime
 import logging
 from copy import deepcopy
+from datetime import datetime
 
 import torch
 from easydict import EasyDict
@@ -13,7 +13,6 @@ from music21.note import Note, Rest
 from music21.tie import Tie
 
 import data
-import utils
 from model import BachNetInference
 
 
