@@ -74,19 +74,6 @@ def main(soprano_path, checkpoint_path):
         outputs.extra.append(inputs.extra[step + config.context_radius].unsqueeze(dim=0))
 
     outputs = {k: torch.cat(v, dim=0) for k, v in outputs.items()}
-    # print({k: v.shape for k, v in outputs.items()})
-
-    utils.generate_txt_output(outputs['bass'], 'bass.txt')
-
-    with open('foo.txt', 'w') as fp:
-        foo = outputs['bass'].t().flip(dims=[0])
-        for pitches in foo:
-            line = ''
-            for step in pitches:
-                char = '*' if step == 1 else ' '
-                line += char
-            fp.write(line)
-            fp.write('\n')
 
     parts = {}
     for part_name in outputs.keys():
