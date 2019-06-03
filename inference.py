@@ -7,6 +7,7 @@ from easydict import EasyDict
 from music21 import stream, clef
 from music21.expressions import Fermata
 from music21.key import KeySignature
+from music21.layout import StaffGroup
 from music21.metadata import Metadata
 from music21.meter import TimeSignature
 from music21.note import Note, Rest
@@ -82,14 +83,6 @@ def main(soprano_path, checkpoint_path):
         if part_name == 'extra':
             continue
         part = stream.Part(id=part_name)
-        measure = stream.Measure(number=cur_measure_number)
-        part.append(measure)
-
-        if part_name in ['soprano', 'alto']:
-            part[-1].append(clef.TrebleClef())
-        else:
-            part[-1].append(clef.BassClef())
-
         parts[part_name] = part
 
     last_time_numerator = None
@@ -103,6 +96,16 @@ def main(soprano_path, checkpoint_path):
         cur_time_pos = extra[data.indices_extra.time_pos].item()
         has_fermata = extra[data.indices_extra.has_fermata].item() == 1
 
+        if cur_time_pos == 1.0 or cur_measure_number == 0:
+            for part_name, part in parts.items():
+                part.append(stream.Measure(number=cur_measure_number))
+                if cur_measure_number == 0:
+                    if part_name in ['soprano', 'alto']:
+                        part[-1].append(clef.TrebleClef())
+                    else:
+                        part[-1].append(clef.BassClef())
+            cur_measure_number += 1
+
         if last_time_numerator is None or last_time_denominator is None or cur_time_numerator != last_time_numerator or cur_time_denominator != last_time_denominator:
             for part in parts.values():
                 part[-1].append(TimeSignature(f'{cur_time_numerator}/{cur_time_denominator}'))
@@ -113,11 +116,6 @@ def main(soprano_path, checkpoint_path):
             for part in parts.values():
                 part[-1].append(KeySignature(cur_num_sharps))
             last_num_sharps = cur_num_sharps
-
-        if cur_time_pos == 1.0:
-            cur_measure_number += 1
-            for part in parts.values():
-                part.append(stream.Measure(number=cur_measure_number))
 
         for part_name, part in parts.items():
             idx = torch.argmax(outputs[part_name][step]).item()
@@ -157,11 +155,14 @@ def main(soprano_path, checkpoint_path):
         score.append(part)
 
     score.stripTies(inPlace=True, retainContainers=True)
+    staff_group = StaffGroup(list(parts.values()), symbol='bracket')
+    staff_group.barTogether = 'yes'
+    score.append(staff_group)
     score.show('musicxml')
 
 
 if __name__ == '__main__':
     main(
-        soprano_path='./data/musicxml/005_soprano.musicxml',
-        checkpoint_path='./checkpoints/2019-06-03_05-26-59 hidden_size=115 context_radius=32 time_grid=0.25/0025 hidden_size=115 context_radius=32 time_grid=0.25.pt'
+        soprano_path='./data/musicxml/008_soprano.musicxml',
+        checkpoint_path='./checkpoints/2019-06-03_02-59-46 hidden_size=79 context_radius=32 time_grid=0.25/0035 hidden_size=79 context_radius=32 time_grid=0.25.pt'
     )
