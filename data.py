@@ -5,7 +5,6 @@ import shutil
 from glob import glob
 
 import torch
-from easydict import EasyDict
 from music21 import converter
 from music21.corpus import chorales
 from music21.expressions import Fermata
@@ -15,18 +14,18 @@ from music21.note import Note, Rest
 from torch.utils.data import Dataset, RandomSampler, BatchSampler, SequentialSampler, DataLoader
 from tqdm import tqdm
 
-indices_parts = EasyDict({
+indices_parts = {
     'is_continued': 0,
     'is_rest': 1
-})
+}
 
-indices_extra = EasyDict({
+indices_extra = {
     'has_fermata': 0,
     'num_sharps': 1,
     'time_numerator': 2,
     'time_denominator': 3,
     'time_pos': 4
-})
+}
 
 pitch_size = 60
 
@@ -37,13 +36,13 @@ class ChoralesDataset(Dataset):
         self.context_radius = context_radius
 
         # Make empty intros for each part
-        self.data = EasyDict({
+        self.data = {
             'soprano': [torch.zeros((context_radius, pitch_size + len(indices_parts)))],
             'tenor': [torch.zeros((context_radius, pitch_size + len(indices_parts)))],
             'alto': [torch.zeros((context_radius, pitch_size + len(indices_parts)))],
             'bass': [torch.zeros((context_radius, pitch_size + len(indices_parts)))],
             'extra': [torch.zeros((context_radius, len(indices_extra)))]
-        })
+        }
 
         # Concat all pieces into large tensors for each part
         for file_path in glob(os.path.join(self.root_dir, '*.pt')):
@@ -55,31 +54,30 @@ class ChoralesDataset(Dataset):
             self.data[part_name] = torch.cat(self.data[part_name], dim=0).float()
 
     def __len__(self):
-        return self.data.soprano.shape[0] - 2 * self.context_radius
+        return self.data['soprano'].shape[0] - 2 * self.context_radius
 
     def __getitem__(self, idx):
         # Return windowed parts from dataset for training and one hot vectors as targets
         return {
-                   'soprano': self.data.soprano[idx:idx + 2 * self.context_radius + 1],
-                   'alto': self.data.alto[idx:idx + self.context_radius],
-                   'tenor': self.data.tenor[idx:idx + self.context_radius],
-                   'bass': self.data.bass[idx:idx + self.context_radius],
-                   'extra': self.data.extra[idx:idx + 2 * self.context_radius + 1]
+                   'soprano': self.data['soprano'][idx:idx + 2 * self.context_radius + 1],
+                   'alto': self.data['alto'][idx:idx + self.context_radius],
+                   'tenor': self.data['tenor'][idx:idx + self.context_radius],
+                   'bass': self.data['bass'][idx:idx + self.context_radius],
+                   'extra': self.data['extra'][idx:idx + 2 * self.context_radius + 1]
                }, {
-                   'alto': torch.argmax(self.data.alto[idx + self.context_radius]),
-                   'tenor': torch.argmax(self.data.tenor[idx + self.context_radius]),
-                   'bass': torch.argmax(self.data.bass[idx + self.context_radius])
+                   'alto': torch.argmax(self.data['alto'][idx + self.context_radius]),
+                   'tenor': torch.argmax(self.data['tenor'][idx + self.context_radius]),
+                   'bass': torch.argmax(self.data['bass'][idx + self.context_radius])
                }
 
 
 def generate_data_inference(time_grid, soprano_path):
     stream = converter.parse(soprano_path).flat
     length = math.ceil(stream.highestTime / time_grid)
-    data = EasyDict({
-        'extra': torch.zeros((length, len(indices_extra)))
-    })
-
-    data['soprano'] = torch.zeros((length, pitch_size + len(indices_parts)))
+    data = {
+        'extra': torch.zeros((length, len(indices_extra))),
+        'soprano': torch.zeros((length, pitch_size + len(indices_parts)))
+    }
 
     # Iterate through all musical elements in current voice stream
     for element in stream:
@@ -94,27 +92,27 @@ def generate_data_inference(time_grid, soprano_path):
             duration = int(element.duration.quarterLength / time_grid)
 
             # Store pitch and ties
-            data.soprano[offset, pitch] = 1
-            data.soprano[offset + 1:offset + duration, indices_parts.is_continued] = 1
+            data['soprano'][offset, pitch] = 1
+            data['soprano'][offset + 1:offset + duration, indices_parts['is_continued']] = 1
 
             # Fermata
             if any([type(e) == Fermata for e in element.expressions]):
-                data.extra[offset, indices_extra.has_fermata] = 1
+                data['extra'][offset, indices_extra['has_fermata']] = 1
 
             # Save position ("beat") in measure
-            data.extra[offset, indices_extra.time_pos] = element.beat
+            data['extra'][offset, indices_extra['time_pos']] = element.beat
 
         if type(element) == Rest:
             duration = int(element.duration.quarterLength / time_grid)
-            data.soprano[offset, indices_parts.is_rest] = 1
-            data.soprano[offset + 1:offset + duration, indices_parts.is_continued] = 1
+            data['soprano'][offset, indices_parts['is_rest']] = 1
+            data['soprano'][offset + 1:offset + duration, indices_parts['is_continued']] = 1
 
         if type(element) == TimeSignature:
-            data.extra[offset:, indices_extra.time_numerator] = element.numerator
-            data.extra[offset:, indices_extra.time_denominator] = element.denominator
+            data['extra'][offset:, indices_extra['time_numerator']] = element.numerator
+            data['extra'][offset:, indices_extra['time_denominator']] = element.denominator
 
         if type(element) == KeySignature or type(element) == Key:
-            data.extra[offset:, indices_extra.num_sharps] = element.sharps
+            data['extra'][offset:, indices_extra['num_sharps']] = element.sharps
 
     return {
         'data': data,
@@ -153,9 +151,9 @@ def _generate_data_training(time_grid, root_dir, overwrite, split):
             continue
 
         length = math.ceil(streams['soprano'].highestTime / time_grid)
-        data = EasyDict({
+        data = {
             'extra': torch.zeros((length, len(indices_extra)))
-        })
+        }
         for part_name, part in streams.items():
             # Init empty tensor for current voice
             data[part_name] = torch.zeros((length, pitch_size + len(indices_parts)))
@@ -174,29 +172,29 @@ def _generate_data_training(time_grid, root_dir, overwrite, split):
 
                     # Store pitch and ties
                     data[part_name][offset, pitch] = 1
-                    data[part_name][offset + 1:offset + duration, indices_parts.is_continued] = 1
+                    data[part_name][offset + 1:offset + duration, indices_parts['is_continued']] = 1
 
                     # Fermata (only used in soprano)
                     if part_name == 'soprano' and any([type(e) == Fermata for e in element.expressions]):
-                        data.extra[offset, indices_extra.has_fermata] = 1
+                        data['extra'][offset, indices_extra['has_fermata']] = 1
 
                     # Save position ("beat") in measure
                     if part_name == 'soprano':
-                        data.extra[offset, indices_extra.time_pos] = element.beat
+                        data['extra'][offset, indices_extra['time_pos']] = element.beat
 
                 if type(element) == Rest:
                     duration = int(element.duration.quarterLength / time_grid)
-                    data[part_name][offset, indices_parts.is_rest] = 1
-                    data[part_name][offset + 1:offset + duration, indices_parts.is_continued] = 1
+                    data[part_name][offset, indices_parts['is_rest']] = 1
+                    data[part_name][offset + 1:offset + duration, indices_parts['is_continued']] = 1
 
                 # Additional information only relevant in soprano voice a.k.a. the model input
                 if part_name == 'soprano':
                     if type(element) == TimeSignature:
-                        data.extra[offset:, indices_extra.time_numerator] = element.numerator
-                        data.extra[offset:, indices_extra.time_denominator] = element.denominator
+                        data['extra'][offset:, indices_extra['time_numerator']] = element.numerator
+                        data['extra'][offset:, indices_extra['time_denominator']] = element.denominator
 
                     if type(element) == KeySignature or type(element) == Key:
-                        data.extra[offset:, indices_extra.num_sharps] = element.sharps
+                        data['extra'][offset:, indices_extra['num_sharps']] = element.sharps
 
         target_file_path = os.path.join(target_dir, f'{str(chorale.metadata.number).zfill(3)}.pt')
         torch.save({
@@ -276,4 +274,4 @@ def get_data_loaders(time_grid=0.25, root_dir=None, overwrite=False, split=0.15,
         context_radius=context_radius
     )
 
-    return EasyDict(data_loaders)
+    return data_loaders

@@ -6,44 +6,21 @@ from statistics import mean
 
 import torch
 import torch.nn
-from easydict import EasyDict
 from torch.utils.tensorboard import SummaryWriter
-from tqdm import trange, tqdm
+from tqdm import trange
 
 import data
+import utils
 from model import BachNetTraining
 
 
-def main(config_passed):
+def main(config):
     logging.debug('Initializing...')
-    config = {
-        'num_epochs': 100,
-        'batch_size': 128,
-        'hidden_size': 75,
-        'use_cuda': True,
-        'num_workers': 4,
-        'lr': 0.001,
-        'lr_step_size': 50,
-        'lr_gamma': 0.95,
-        'time_grid': 0.25,
-        'context_radius': 16,
-        'checkpoint_root_dir': os.path.join('.', 'checkpoints'),
-        'checkpoint_interval': None,
-        'log_interval': 1
-    }
-
-    # Save deviations from default config as string for logging
-    blacklist = ['checkpoint_root_dir', 'checkpoint_interval', 'use_cuda', 'num_epochs', 'num_workers', 'log_interval']
-    config_string = ' '.join([f'{k}={v}' for k, v in config_passed.items() if k not in blacklist]).strip()
-
-    # Update default config with passed parameters
-    config.update(config_passed)
-    config = EasyDict(config)
 
     # Prepare logging
     date = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    checkpoint_dir = os.path.join(config.checkpoint_root_dir, f'{date} {config_string}')
-    log_dir = os.path.join('.', 'runs', f'{date} {config_string}')
+    checkpoint_dir = os.path.join(config.checkpoint_root_dir, f'{date} {str(config)}')
+    log_dir = os.path.join('.', 'runs', f'{date} {str(config)}')
     writer = SummaryWriter(log_dir=log_dir)
 
     logging.debug(f'Configuration:\n{pprint.pformat(config)}')
@@ -115,7 +92,7 @@ def main(config_passed):
 
         if config.checkpoint_interval is not None and (epoch + 1) % config.checkpoint_interval == 0:
             os.makedirs(checkpoint_dir, exist_ok=True)
-            checkpoint_path = os.path.join(checkpoint_dir, f'{str(epoch + 1).zfill(4)} {config_string}.pt')
+            checkpoint_path = os.path.join(checkpoint_dir, f'{str(epoch + 1).zfill(4)} {str(config)}.pt')
             torch.save({
                 'config': config,
                 'state': model.state_dict(),
@@ -134,19 +111,15 @@ def main(config_passed):
 if __name__ == '__main__':
     logging.basicConfig(level=logging.ERROR)
 
-    configs = []
-    for hidden_size in range(50, 120):
-        config = {
-            'num_epochs': 50,
-            'hidden_size': hidden_size,
-            'context_radius': 32,
-            'time_grid': 0.25,
-            'checkpoint_interval': 1
-        }
-        configs.append(config)
+    config = utils.Config({
+        'num_epochs': 50,
+        'hidden_size': 115,
+        'context_radius': 32,
+        'time_grid': 0.25,
+        'checkpoint_interval': 1
+    })
 
-    for c in tqdm(configs, unit='config'):
-        main(c)
+    main(config)
     # from concurrent.futures import ThreadPoolExecutor
     # with ThreadPoolExecutor(max_workers=2) as executor:
     #     executor.map(main, configs)
