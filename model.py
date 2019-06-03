@@ -68,7 +68,7 @@ class BachNetTraining(BachNetBase):
 
 class BachNetInference(BachNetBase):
     def forward(self, inputs):
-        inputs_bass = torch.cat([v.view(self.batch_size, -1) for v in inputs.values()], dim=1)
+        inputs_bass = torch.cat([v.view(1, -1) for v in inputs.values()], dim=1)
 
         outputs_bass = selu(self.fc_bass_1(inputs_bass))
         outputs_bass = self.dropout(outputs_bass)

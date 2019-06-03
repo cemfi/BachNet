@@ -64,5 +64,5 @@ def main(soprano_path, checkpoint_path):
 if __name__ == '__main__':
     main(
         soprano_path='./data/musicxml/009_soprano.musicxml',
-        checkpoint_path='./checkpoints/2019-06-03_08-02-11 hidden_size=115 context_radius=32 time_grid=0.25/0034 hidden_size=115 context_radius=32 time_grid=0.25.pt'
+        checkpoint_path='./checkpoints/2019-06-03_09-12-59 batch_size=4096 hidden_size=115 context_radius=32 time_grid=0.25/0051 batch_size=4096 hidden_size=115 context_radius=32 time_grid=0.25.pt'
     )
