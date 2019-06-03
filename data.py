@@ -31,7 +31,7 @@ pitch_size = 60
 
 
 class ChoralesDataset(Dataset):
-    def __init__(self, root_dir, context_radius=32):
+    def __init__(self, root_dir, context_radius=32, transpositions=[0]):
         self.root_dir = root_dir
         self.context_radius = context_radius
 
@@ -52,6 +52,19 @@ class ChoralesDataset(Dataset):
                     torch.cat((part_data, torch.zeros((context_radius, part_data.shape[1]))), dim=0))
         for part_name, part_data in self.data.items():
             self.data[part_name] = torch.cat(self.data[part_name], dim=0).float()
+
+        # Data augmentation (transpositions)
+        for part_name in self.data.keys():
+            if part_name == 'extra':
+                self.data[part_name] = self.data[part_name].repeat(len(transpositions), 1)
+            else:
+                part_transposed = []
+                for t in transpositions:
+                    part_transposed.append(torch.cat([
+                        self.data[part_name][:, :pitch_size].roll(t, dims=1),
+                        self.data[part_name][:, pitch_size:]
+                    ], dim=1))
+                self.data[part_name] = torch.cat(part_transposed, dim=0)
 
     def __len__(self):
         return self.data['soprano'].shape[0] - 2 * self.context_radius
@@ -217,15 +230,16 @@ def _generate_data_training(time_grid, root_dir, overwrite, split):
     return target_dir
 
 
-def _make_data_loaders(root_dir, batch_size, num_workers, context_radius):
+def _make_data_loaders(root_dir, batch_size, num_workers, context_radius, transpositions):
     # Training data loader: random sampling
     train_dataset = ChoralesDataset(
         root_dir=os.path.join(root_dir, 'train'),
-        context_radius=context_radius
+        context_radius=context_radius,
+        transpositions=transpositions
     )
     train_sampler = RandomSampler(train_dataset)
     train_batch_sampler = BatchSampler(
-        train_sampler, batch_size, drop_last=True
+        train_sampler, batch_size, drop_last=False
     )
     train_data_loader = DataLoader(
         train_dataset,
@@ -236,11 +250,12 @@ def _make_data_loaders(root_dir, batch_size, num_workers, context_radius):
     # Testing data loader: sequential sampling
     test_dataset = ChoralesDataset(
         root_dir=os.path.join(root_dir, 'test'),
-        context_radius=context_radius
+        context_radius=context_radius,
+        transpositions=[0]
     )
     test_sampler = SequentialSampler(test_dataset)
     test_batch_sampler = BatchSampler(
-        test_sampler, batch_size, drop_last=True
+        test_sampler, batch_size, drop_last=False
     )
     test_data_loader = DataLoader(
         test_dataset,
@@ -256,7 +271,7 @@ def _make_data_loaders(root_dir, batch_size, num_workers, context_radius):
     }
 
 
-def get_data_loaders(time_grid=0.25, root_dir=None, overwrite=False, split=0.15, batch_size=1, num_workers=1, context_radius=16):
+def get_data_loaders(time_grid=0.25, root_dir=None, overwrite=False, split=0.15, batch_size=1, num_workers=1, context_radius=32, transpositions=[-6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5]):
     if root_dir is None:
         root_dir = os.path.join('.', 'data')
 
@@ -269,6 +284,7 @@ def get_data_loaders(time_grid=0.25, root_dir=None, overwrite=False, split=0.15,
 
     data_loaders = _make_data_loaders(
         data_dir,
+        transpositions=transpositions,
         batch_size=batch_size,
         num_workers=num_workers,
         context_radius=context_radius

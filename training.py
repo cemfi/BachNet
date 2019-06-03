@@ -38,7 +38,6 @@ def main(config):
 
     logging.debug('Creating model...')
     model = BachNetTraining(
-        batch_size=config.batch_size,
         hidden_size=config.hidden_size,
         context_radius=config.context_radius
     ).to(device)
@@ -112,7 +111,8 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.ERROR)
 
     config = utils.Config({
-        'num_epochs': 50,
+        'num_epochs': 500,
+        'batch_size': 4096,
         'hidden_size': 115,
         'context_radius': 32,
         'time_grid': 0.25,

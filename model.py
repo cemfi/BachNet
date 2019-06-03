@@ -5,10 +5,8 @@ import data
 
 
 class BachNetBase(torch.nn.Module):
-    def __init__(self, batch_size, hidden_size, context_radius, dropout=0.5):
+    def __init__(self, hidden_size, context_radius, dropout=0.5):
         super(BachNetBase, self).__init__()
-        self.batch_size = batch_size
-
         self.output_size = data.pitch_size + len(data.indices_parts)
         input_size = (5 * context_radius + 1) * self.output_size + \
                      (2 * context_radius + 1) * len(data.indices_extra)
@@ -33,7 +31,9 @@ class BachNetBase(torch.nn.Module):
 
 class BachNetTraining(BachNetBase):
     def forward(self, inputs):
-        inputs_bass = torch.cat([v.view(self.batch_size, -1) for v in inputs.values()], dim=1)
+        batch_size = inputs['soprano'].shape[0]
+
+        inputs_bass = torch.cat([v.view(batch_size, -1) for v in inputs.values()], dim=1)
 
         outputs_bass = selu(self.fc_bass_1(inputs_bass))
         outputs_bass = self.dropout(outputs_bass)

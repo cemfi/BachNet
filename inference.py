@@ -11,7 +11,6 @@ def main(soprano_path, checkpoint_path):
     state = checkpoint['state']
 
     model = BachNetInference(
-        batch_size=1,
         hidden_size=config.hidden_size,
         context_radius=config.context_radius
     )
