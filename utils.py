@@ -24,7 +24,7 @@ class Config(object):
     hidden_size = 75
     use_cuda = True
     num_workers = 4
-    lr = 0.001
+    lr = 0.003
     lr_step_size = 50
     lr_gamma = 0.95
     time_grid = 0.25

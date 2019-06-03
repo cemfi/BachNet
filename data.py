@@ -96,6 +96,9 @@ def generate_data_inference(time_grid, soprano_path):
     for element in stream:
         offset = int(element.offset / time_grid)
 
+        # Save position ("beat") in measure
+        data['extra'][offset, indices_extra['time_pos']] = element.beat
+
         if type(element) == Note:
             # Skip grace notes
             if element.duration.quarterLength == 0:
@@ -111,9 +114,6 @@ def generate_data_inference(time_grid, soprano_path):
             # Fermata
             if any([type(e) == Fermata for e in element.expressions]):
                 data['extra'][offset, indices_extra['has_fermata']] = 1
-
-            # Save position ("beat") in measure
-            data['extra'][offset, indices_extra['time_pos']] = element.beat
 
         if type(element) == Rest:
             duration = int(element.duration.quarterLength / time_grid)
@@ -175,6 +175,14 @@ def _generate_data_training(time_grid, root_dir, overwrite, split):
             for element in part:
                 offset = int(element.offset / time_grid)
 
+                # Save position ("beat") in measure
+                if part_name == 'soprano':
+                    try:
+                        data['extra'][offset, indices_extra['time_pos']] = element.beat
+                    except IndexError:
+                        # "offset" might be after the entire piece
+                        pass
+
                 if type(element) == Note:
                     # Skip grace notes
                     if element.duration.quarterLength == 0:
@@ -190,10 +198,6 @@ def _generate_data_training(time_grid, root_dir, overwrite, split):
                     # Fermata (only used in soprano)
                     if part_name == 'soprano' and any([type(e) == Fermata for e in element.expressions]):
                         data['extra'][offset, indices_extra['has_fermata']] = 1
-
-                    # Save position ("beat") in measure
-                    if part_name == 'soprano':
-                        data['extra'][offset, indices_extra['time_pos']] = element.beat
 
                 if type(element) == Rest:
                     duration = int(element.duration.quarterLength / time_grid)
@@ -215,8 +219,8 @@ def _generate_data_training(time_grid, root_dir, overwrite, split):
             'title': chorale.metadata.title
         }, target_file_path)
 
-        chorale.write('musicxml', os.path.join(musicxml_dir, f'{str(chorale.metadata.number).zfill(3)}_full.musicxml'))
-        chorale['Soprano'].write('musicxml', os.path.join(musicxml_dir, f'{str(chorale.metadata.number).zfill(3)}_soprano.musicxml'))
+        chorale.write('musicxml', os.path.join(musicxml_dir, f'{str(chorale.metadata.number).zfill(3)} {chorale.metadata.title}_full.musicxml'))
+        chorale['Soprano'].write('musicxml', os.path.join(musicxml_dir, f'{str(chorale.metadata.number).zfill(3)} {chorale.metadata.title}_soprano.musicxml'))
 
     # Move files to train / test directories
     file_paths = glob(os.path.join(target_dir, '*.pt'))

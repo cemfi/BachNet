@@ -77,9 +77,10 @@ def main(config):
                         optimizer.step()
 
                 # Log current loss
-                if batch_idx % config.log_interval == 0 or len(data_loaders[phase]) / config.batch_size < config.log_interval:
+                if batch_idx % config.log_interval == 0:
                     step = int((float(epoch) + (batch_idx / len(data_loaders[phase]))) * 1000)
                     writer.add_scalars('loss', {phase: loss.item()}, step)
+                    writer.add_scalars('loss_per_parts', {f'{phase}_{k}': v for k, v in losses.items()}, step)
 
             # Log mean loss per epoch
             mean_loss_per_epoch = mean(loss_list)
@@ -113,7 +114,7 @@ if __name__ == '__main__':
     config = utils.Config({
         'num_epochs': 500,
         'batch_size': 4096,
-        'hidden_size': 115,
+        'hidden_size': 200,
         'context_radius': 32,
         'time_grid': 0.25,
         'checkpoint_interval': 1

@@ -29,7 +29,7 @@ def main(soprano_path, checkpoint_path):
 
     # Empty "history" for generated parts
     for part in ['alto', 'tenor', 'bass']:
-        inputs[part] = torch.zeros((config.context_radius, inputs['soprano'].shape[1]))
+        inputs[part] = torch.zeros((config.context_radius, data.pitch_size + len(data.indices_parts)))
 
     # Zero padding for input data
     for part in ['soprano', 'extra']:
@@ -59,6 +59,7 @@ def main(soprano_path, checkpoint_path):
 
     score = utils.tensors_to_stream(outputs, config, metadata)
     score.show('musicxml')
+    # score.write('musicxml', 'output.musicxml')
 
 
 if __name__ == '__main__':
@@ -66,7 +67,8 @@ if __name__ == '__main__':
     latest_checkpoint = sorted(glob('./checkpoints/**/*.pt'))[-1]
 
     main(
-        soprano_path='./data/musicxml/009_soprano.musicxml',
-        # checkpoint_path='./checkpoints/2019-06-03_09-12-59 batch_size=4096 hidden_size=115 context_radius=32 time_grid=0.25/0062 batch_size=4096 hidden_size=115 context_radius=32 time_grid=0.25.pt'
+        # soprano_path='./data/musicxml/063_soprano.musicxml',
+        soprano_path='./kirby fsharp fermata.mxl',
+        # checkpoint_path='./checkpoints/2019-06-03_11-20-52 batch_size=4096 hidden_size=200 context_radius=32 time_grid=0.25/0060 batch_size=4096 hidden_size=200 context_radius=32 time_grid=0.25.pt'
         checkpoint_path=latest_checkpoint
     )
