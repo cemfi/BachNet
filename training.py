@@ -135,10 +135,9 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.ERROR)
 
     configs = []
-    for hidden_size in range(88, 89):
+    for hidden_size in range(50, 120):
         config = {
-            'num_epochs': 500,
-            'batch_size': 1,
+            'num_epochs': 50,
             'hidden_size': hidden_size,
             'context_radius': 32,
             'time_grid': 0.25,
@@ -149,6 +148,5 @@ if __name__ == '__main__':
     for c in tqdm(configs, unit='config'):
         main(c)
     # from concurrent.futures import ThreadPoolExecutor
-    #
-    # with ThreadPoolExecutor(max_workers=4) as executor:
+    # with ThreadPoolExecutor(max_workers=2) as executor:
     #     executor.map(main, configs)

@@ -10,6 +10,7 @@ from music21.key import KeySignature
 from music21.metadata import Metadata
 from music21.meter import TimeSignature
 from music21.note import Note, Rest
+from music21.pitch import Pitch
 from music21.tie import Tie
 
 import data
@@ -35,6 +36,7 @@ def main(soprano_path, checkpoint_path):
     )
 
     inputs = sample['data']
+    metadata = sample['metadata']
 
     length = inputs.soprano.shape[0]
 
@@ -74,12 +76,13 @@ def main(soprano_path, checkpoint_path):
 
     outputs = {k: torch.cat(v, dim=0) for k, v in outputs.items()}
 
+    cur_measure_number = 0
     parts = {}
     for part_name in outputs.keys():
         if part_name == 'extra':
             continue
         part = stream.Part(id=part_name)
-        measure = stream.Measure()
+        measure = stream.Measure(number=cur_measure_number)
         part.append(measure)
 
         if part_name in ['soprano', 'alto']:
@@ -112,8 +115,9 @@ def main(soprano_path, checkpoint_path):
             last_num_sharps = cur_num_sharps
 
         if cur_time_pos == 1.0:
+            cur_measure_number += 1
             for part in parts.values():
-                part.append(stream.Measure())
+                part.append(stream.Measure(number=cur_measure_number))
 
         for part_name, part in parts.items():
             idx = torch.argmax(outputs[part_name][step]).item()
@@ -121,7 +125,10 @@ def main(soprano_path, checkpoint_path):
                 try:
                     last_element = part[-1].flat.notesAndRests[-1]
                     cur_element = deepcopy(last_element)
-                    last_element.tie = Tie('start')
+                    if last_element.tie is not None and last_element.tie.type == 'stop':
+                        last_element.tie = Tie('continue')
+                    else:
+                        last_element.tie = Tie('start')
                     cur_element.tie = Tie('stop')
                 except IndexError:
                     logging.debug('Warning: "is_continued" on first beat. Replaced by rest.')
@@ -130,27 +137,31 @@ def main(soprano_path, checkpoint_path):
             elif idx == data.indices_parts.is_rest:
                 part[-1].append(Rest(quarterLength=config.time_grid))
             else:
-                pitch = idx + (data.pitch_size // 2) - len(data.indices_parts)
+                pitch = Pitch()
                 part[-1].append(Note(pitch, quarterLength=config.time_grid))
+                # Set pitch value AFTER appending to measure in order to avoid unnecessary accidentals
+                pitch.midi = idx + (data.pitch_size // 2) - len(data.indices_parts)
 
         if has_fermata:
             for part in parts.values():
-                part[-1][-1].expressions.append(Fermata())
+                fermata = Fermata()
+                fermata.type = 'upright'
+                part[-1][-1].expressions.append(fermata)
 
     score = stream.Score()
     score.append(Metadata())
-    score.metadata.title = f"{sample['metadata'].title} ({sample['metadata'].number})"
-    score.metadata.composer = f"Melody: J.S. Bach\nArrangement: BachNet ({datetime.now().year})"
+    score.metadata.title = f"{metadata.title} ({metadata.number})"
+    score.metadata.composer = f"Melody: {metadata.composer}\nArrangement: BachNet ({datetime.now().year})"
     for part in parts.values():
+        part[-1].rightBarline = 'light-heavy'
         score.append(part)
 
     score.stripTies(inPlace=True, retainContainers=True)
-    score.makeAccidentals(inPlace=True, overrideStatus=True)
     score.show('musicxml')
 
 
 if __name__ == '__main__':
     main(
-        soprano_path='./data/musicxml/002_soprano.musicxml',
-        checkpoint_path='./checkpoints/2019-06-02_23-40-53 hidden_size=88 context_radius=32 time_grid=0.25/0009 hidden_size=88 context_radius=32 time_grid=0.25.pt'
+        soprano_path='./data/musicxml/005_soprano.musicxml',
+        checkpoint_path='./checkpoints/2019-06-03_05-26-59 hidden_size=115 context_radius=32 time_grid=0.25/0025 hidden_size=115 context_radius=32 time_grid=0.25.pt'
     )
