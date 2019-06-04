@@ -96,8 +96,9 @@ def generate_data_inference(time_grid, soprano_path):
     for element in stream:
         offset = int(element.offset / time_grid)
 
-        # Save position ("beat") in measure
-        data['extra'][offset, indices_extra['time_pos']] = element.beat
+        if type(element) in [Note, Rest]:
+            # Save position ("beat") in measure
+            data['extra'][offset, indices_extra['time_pos']] = element.beat
 
         if type(element) == Note:
             # Skip grace notes
@@ -175,18 +176,14 @@ def _generate_data_training(time_grid, root_dir, overwrite, split):
             for element in part:
                 offset = int(element.offset / time_grid)
 
-                # Save position ("beat") in measure
-                if part_name == 'soprano':
-                    try:
-                        data['extra'][offset, indices_extra['time_pos']] = element.beat
-                    except IndexError:
-                        # "offset" might be after the entire piece
-                        pass
-
                 if type(element) == Note:
                     # Skip grace notes
                     if element.duration.quarterLength == 0:
                         continue
+
+                    if part_name == 'soprano':
+                        # Save position ("beat") in measure
+                        data['extra'][offset, indices_extra['time_pos']] = element.beat
 
                     pitch = element.pitch.midi - pitch_size // 2 + len(indices_parts)
                     duration = int(element.duration.quarterLength / time_grid)
@@ -204,7 +201,10 @@ def _generate_data_training(time_grid, root_dir, overwrite, split):
                     data[part_name][offset, indices_parts['is_rest']] = 1
                     data[part_name][offset + 1:offset + duration, indices_parts['is_continued']] = 1
 
-                # Additional information only relevant in soprano voice a.k.a. the model input
+                    if part_name == 'soprano':
+                        # Save position ("beat") in measure
+                        data['extra'][offset, indices_extra['time_pos']] = element.beat
+
                 if part_name == 'soprano':
                     if type(element) == TimeSignature:
                         data['extra'][offset:, indices_extra['time_numerator']] = element.numerator
