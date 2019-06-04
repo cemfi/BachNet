@@ -104,9 +104,15 @@ class BachNetInference(BachNetBase):
 
 
 class BachNetInferenceWithBeamSearch(BachNetBase):
-    def forward(self, inputs):
-        self.num_candidates = 3
+    def __init__(self, num_candidates, *args, **kwargs):
+        super(BachNetInferenceWithBeamSearch, self).__init__(*args, **kwargs)
+        self.num_candidates = num_candidates
 
+    def forward(self, inputs):
+        num_parts = 3
+        results = torch.zeros((self.num_candidates, 1 + num_parts))  # [[Candidate index], [[ProbAcc, PitchB, PitchA, PitchT]]
+
+        # Bass #################################################################
         inputs_bass = torch.cat([v.view(1, -1) for v in inputs.values()], dim=1).squeeze()  # !!! SQUEEZED !!!
 
         outputs_bass = selu(self.fc_bass_1(inputs_bass))
@@ -115,10 +121,15 @@ class BachNetInferenceWithBeamSearch(BachNetBase):
         outputs_bass = self.dropout(outputs_bass)
         outputs_bass = self.fc_bass_3(outputs_bass)
 
-        probabilities_bass, pitches_bass = torch.sort(torch.softmax(outputs_bass, dim=0), dim=0, descending=True)
-        predictions_bass = one_hot(pitches_bass[:self.num_candidates], self.output_size).float()
+        probabilities, pitches = torch.sort(torch.softmax(outputs_bass, dim=0), dim=0, descending=True)
+        results[:, 0] = probabilities[:self.num_candidates]
+        results[:, 1] = pitches[:self.num_candidates]
 
-        inputs_alto = torch.cat([inputs_bass.repeat(self.num_candidates, 1), predictions_bass], dim=1)
+        # Alto #################################################################
+        inputs_alto = torch.cat([
+            inputs_bass.repeat(self.num_candidates, 1),
+            one_hot(results[:, 1].long(), self.output_size).float()
+        ], dim=1)
 
         outputs_alto = selu(self.fc_alto_1(inputs_alto))
         outputs_alto = self.dropout(outputs_alto)
@@ -126,27 +137,41 @@ class BachNetInferenceWithBeamSearch(BachNetBase):
         outputs_alto = self.dropout(outputs_alto)
         outputs_alto = self.fc_alto_3(outputs_alto)
 
-        probabilities_alto, pitches_alto = torch.sort(torch.softmax(outputs_alto, dim=1), dim=1, descending=True)
-        print(pitches_alto)
+        probabilities = torch.softmax(outputs_alto, dim=1)
+        probabilities = probabilities.t() * results[:, 0]
+        probabilities, pitches_indicies = torch.sort(probabilities.t().contiguous().view(1, -1).squeeze(), dim=0, descending=True)
 
+        pitches_alto = pitches_indicies % self.output_size
+        pitches_bass = results[:, 1][pitches_indicies // self.output_size]
 
-        exit()
+        results[:, 0] = probabilities[:self.num_candidates]
+        results[:, 1] = pitches_bass[:self.num_candidates]
+        results[:, 2] = pitches_alto[:self.num_candidates]
 
-        for candidate_idx_alto in range(self.num_candidates):
-            prediction_alto = one_hot(pitches_alto[:, candidate_idx_alto], self.output_size).float()
+       # Tenor ################################################################
+        inputs_tenor = torch.cat([
+            inputs_bass.repeat(self.num_candidates, 1),
+            one_hot(results[:, 1].long(), self.output_size).float(),
+            one_hot(results[:, 2].long(), self.output_size).float()
+        ], dim=1)
 
-            inputs_tenor = torch.cat([inputs_alto, prediction_alto], dim=1)
+        outputs_tenor = selu(self.fc_tenor_1(inputs_tenor))
+        outputs_tenor = self.dropout(outputs_tenor)
+        outputs_tenor = selu(self.fc_tenor_2(outputs_tenor))
+        outputs_tenor = self.dropout(outputs_tenor)
+        outputs_tenor = self.fc_tenor_3(outputs_tenor)
 
-            outputs_tenor = selu(self.fc_tenor_1(inputs_tenor))
-            outputs_tenor = self.dropout(outputs_tenor)
-            outputs_tenor = selu(self.fc_tenor_2(outputs_tenor))
-            outputs_tenor = self.dropout(outputs_tenor)
-            outputs_tenor = self.fc_tenor_3(outputs_tenor)
+        probabilities = torch.softmax(outputs_tenor, dim=1)
+        probabilities = probabilities.t() * results[:, 0]
+        probabilities, pitches_indicies = torch.sort(probabilities.t().contiguous().view(1, -1).squeeze(), dim=0, descending=True)
 
-            prediction_tenor = one_hot(torch.max(outputs_tenor, dim=1)[1], self.output_size).float()
+        pitches_tenor = pitches_indicies % self.output_size
+        pitches_bass = results[:, 1][pitches_indicies // self.output_size]
+        pitches_alto = results[:, 2][pitches_indicies // self.output_size]
 
-        return {
-            'alto': prediction_alto,
-            'tenor': prediction_tenor,
-            'bass': prediction_bass
-        }
+        results[:, 0] = probabilities[:self.num_candidates]
+        results[:, 1] = pitches_bass[:self.num_candidates]
+        results[:, 2] = pitches_alto[:self.num_candidates]
+        results[:, 3] = pitches_tenor[:self.num_candidates]
+
+        return results

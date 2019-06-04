@@ -6,7 +6,7 @@ from model import BachNetInference
 
 
 def main(soprano_path, checkpoint_path):
-    checkpoint = torch.load(checkpoint_path)
+    checkpoint = torch.load(checkpoint_path, map_location='cpu')
     config = checkpoint['config']
     state = checkpoint['state']
 
@@ -29,7 +29,7 @@ def main(soprano_path, checkpoint_path):
 
     # Empty "history" for generated parts
     for part in ['alto', 'tenor', 'bass']:
-        inputs[part] = torch.zeros((config.context_radius, data.pitch_size + len(data.indices_parts)))
+        inputs[part] = torch.zeros((config.context_radius, data.part_size))
 
     # Zero padding for input data
     for part in ['soprano', 'extra']:
@@ -58,17 +58,16 @@ def main(soprano_path, checkpoint_path):
     outputs = {k: torch.cat(v, dim=0) for k, v in outputs.items()}
 
     score = utils.tensors_to_stream(outputs, config, metadata)
-    score.show('musicxml')
-    # score.write('musicxml', 'output.musicxml')
+    # score.show('musicxml')
+    score.write('musicxml', 'output.musicxml')
 
 
 if __name__ == '__main__':
-    from glob import glob
-    latest_checkpoint = sorted(glob('./checkpoints/**/*.pt'))[-1]
+    # from glob import glob
+    # latest_checkpoint = sorted(glob('./checkpoints/**/*.pt'))[-1]
 
     main(
-        soprano_path='./data/musicxml/246 Singt dem Herrn ein neues Lied_soprano.musicxml',
-        # soprano_path='./kirby fsharp fermata.mxl',
-        checkpoint_path='./checkpoints/2019-06-04_06-05-52 batch_size=8192 hidden_size=200 context_radius=32 time_grid=0.25 lr=0.002/0110 batch_size=8192 hidden_size=200 context_radius=32 time_grid=0.25 lr=0.002.pt'
+        soprano_path='./data/musicxml/230 Christ, der du bist der helle Tag_soprano.musicxml',
+        checkpoint_path='./0070 batch_size=8192 hidden_size=500 context_radius=32 time_grid=0.25 lr=0.002.pt'
         # checkpoint_path=latest_checkpoint
     )

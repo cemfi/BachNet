@@ -28,6 +28,7 @@ indices_extra = {
 }
 
 pitch_size = 60
+part_size = pitch_size + len(indices_parts)
 
 
 class ChoralesDataset(Dataset):
@@ -37,10 +38,10 @@ class ChoralesDataset(Dataset):
 
         # Make empty intros for each part
         self.data = {
-            'soprano': [torch.zeros((context_radius, pitch_size + len(indices_parts)))],
-            'tenor': [torch.zeros((context_radius, pitch_size + len(indices_parts)))],
-            'alto': [torch.zeros((context_radius, pitch_size + len(indices_parts)))],
-            'bass': [torch.zeros((context_radius, pitch_size + len(indices_parts)))],
+            'soprano': [torch.zeros((context_radius, part_size))],
+            'tenor': [torch.zeros((context_radius, part_size))],
+            'alto': [torch.zeros((context_radius, part_size))],
+            'bass': [torch.zeros((context_radius, part_size))],
             'extra': [torch.zeros((context_radius, len(indices_extra)))]
         }
 
@@ -89,7 +90,7 @@ def generate_data_inference(time_grid, soprano_path):
     length = math.ceil(stream.highestTime / time_grid)
     data = {
         'extra': torch.zeros((length, len(indices_extra))),
-        'soprano': torch.zeros((length, pitch_size + len(indices_parts)))
+        'soprano': torch.zeros((length, part_size))
     }
 
     # Iterate through all musical elements in current voice stream
@@ -170,7 +171,7 @@ def _generate_data_training(time_grid, root_dir, overwrite, split):
         }
         for part_name, part in streams.items():
             # Init empty tensor for current voice
-            data[part_name] = torch.zeros((length, pitch_size + len(indices_parts)))
+            data[part_name] = torch.zeros((length, part_size))
 
             # Iterate through all musical elements in current voice stream
             for element in part:
@@ -270,8 +271,8 @@ def _make_data_loaders(root_dir, batch_size, num_workers, context_radius, transp
     return {
         'train': train_data_loader,
         'test': test_data_loader,
-        'input_size': (pitch_size + len(indices_parts)) * 4 + len(indices_extra),
-        'output_sizes': (pitch_size + len(indices_parts))
+        'input_size': (part_size) * 4 + len(indices_extra),
+        'output_sizes': (part_size)
     }
 
 
@@ -295,3 +296,7 @@ def get_data_loaders(time_grid=0.25, root_dir=None, overwrite=False, split=0.15,
     )
 
     return data_loaders
+
+
+if __name__ == '__main__':
+    get_data_loaders()
