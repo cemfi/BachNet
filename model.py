@@ -101,3 +101,52 @@ class BachNetInference(BachNetBase):
             'tenor': prediction_tenor,
             'bass': prediction_bass
         }
+
+
+class BachNetInferenceWithBeamSearch(BachNetBase):
+    def forward(self, inputs):
+        self.num_candidates = 3
+
+        inputs_bass = torch.cat([v.view(1, -1) for v in inputs.values()], dim=1).squeeze()  # !!! SQUEEZED !!!
+
+        outputs_bass = selu(self.fc_bass_1(inputs_bass))
+        outputs_bass = self.dropout(outputs_bass)
+        outputs_bass = selu(self.fc_bass_2(outputs_bass))
+        outputs_bass = self.dropout(outputs_bass)
+        outputs_bass = self.fc_bass_3(outputs_bass)
+
+        probabilities_bass, pitches_bass = torch.sort(torch.softmax(outputs_bass, dim=0), dim=0, descending=True)
+        predictions_bass = one_hot(pitches_bass[:self.num_candidates], self.output_size).float()
+
+        inputs_alto = torch.cat([inputs_bass.repeat(self.num_candidates, 1), predictions_bass], dim=1)
+
+        outputs_alto = selu(self.fc_alto_1(inputs_alto))
+        outputs_alto = self.dropout(outputs_alto)
+        outputs_alto = selu(self.fc_alto_2(outputs_alto))
+        outputs_alto = self.dropout(outputs_alto)
+        outputs_alto = self.fc_alto_3(outputs_alto)
+
+        probabilities_alto, pitches_alto = torch.sort(torch.softmax(outputs_alto, dim=1), dim=1, descending=True)
+        print(pitches_alto)
+
+
+        exit()
+
+        for candidate_idx_alto in range(self.num_candidates):
+            prediction_alto = one_hot(pitches_alto[:, candidate_idx_alto], self.output_size).float()
+
+            inputs_tenor = torch.cat([inputs_alto, prediction_alto], dim=1)
+
+            outputs_tenor = selu(self.fc_tenor_1(inputs_tenor))
+            outputs_tenor = self.dropout(outputs_tenor)
+            outputs_tenor = selu(self.fc_tenor_2(outputs_tenor))
+            outputs_tenor = self.dropout(outputs_tenor)
+            outputs_tenor = self.fc_tenor_3(outputs_tenor)
+
+            prediction_tenor = one_hot(torch.max(outputs_tenor, dim=1)[1], self.output_size).float()
+
+        return {
+            'alto': prediction_alto,
+            'tenor': prediction_tenor,
+            'bass': prediction_bass
+        }

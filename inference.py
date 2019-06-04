@@ -67,8 +67,8 @@ if __name__ == '__main__':
     latest_checkpoint = sorted(glob('./checkpoints/**/*.pt'))[-1]
 
     main(
-        # soprano_path='./data/musicxml/063_soprano.musicxml',
-        soprano_path='./kirby fsharp fermata.mxl',
-        # checkpoint_path='./checkpoints/2019-06-03_11-20-52 batch_size=4096 hidden_size=200 context_radius=32 time_grid=0.25/0060 batch_size=4096 hidden_size=200 context_radius=32 time_grid=0.25.pt'
-        checkpoint_path=latest_checkpoint
+        soprano_path='./data/musicxml/246 Singt dem Herrn ein neues Lied_soprano.musicxml',
+        # soprano_path='./kirby fsharp fermata.mxl',
+        checkpoint_path='./checkpoints/2019-06-04_06-05-52 batch_size=8192 hidden_size=200 context_radius=32 time_grid=0.25 lr=0.002/0110 batch_size=8192 hidden_size=200 context_radius=32 time_grid=0.25 lr=0.002.pt'
+        # checkpoint_path=latest_checkpoint
     )

@@ -23,9 +23,9 @@ class Config(object):
     batch_size = 128
     hidden_size = 75
     use_cuda = True
-    num_workers = 4
-    lr = 0.003
-    lr_step_size = 50
+    num_workers = 1
+    lr = 0.0001
+    lr_step_size = 10
     lr_gamma = 0.95
     time_grid = 0.25
     context_radius = 16

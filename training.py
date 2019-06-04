@@ -111,16 +111,25 @@ def main(config):
 if __name__ == '__main__':
     logging.basicConfig(level=logging.ERROR)
 
-    config = utils.Config({
-        'num_epochs': 500,
-        'batch_size': 4096,
-        'hidden_size': 200,
-        'context_radius': 32,
-        'time_grid': 0.25,
-        'checkpoint_interval': 1
-    })
+    configs = []
+    for hidden_size in [300, 500, 700]:
+        config = utils.Config({
+            'num_epochs': 200,
+            'batch_size': 8192,
+            'num_workers': 8,
+            'hidden_size': hidden_size,
+            'context_radius': 32,
+            'time_grid': 0.25,
+            'lr': 0.002,
+            'checkpoint_interval': 10
+        })
+        configs.append(config)
 
-    main(config)
+    from tqdm import tqdm
+
+    for config in tqdm(configs):
+        main(config)
+
     # from concurrent.futures import ThreadPoolExecutor
     # with ThreadPoolExecutor(max_workers=2) as executor:
     #     executor.map(main, configs)
