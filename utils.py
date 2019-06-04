@@ -7,7 +7,6 @@ import torch
 from music21 import clef
 from music21.expressions import Fermata
 from music21.key import KeySignature
-from music21.layout import StaffGroup
 from music21.metadata import Metadata
 from music21.meter import TimeSignature
 from music21.note import Rest, Note
@@ -133,11 +132,12 @@ def tensors_to_stream(outputs, config, metadata):
     score.metadata.composer = f"Melody: {metadata.composer}\nArrangement: BachNet ({datetime.now().year})"
     for part in parts.values():
         part[-1].rightBarline = 'light-heavy'
-        score.append(part)
+
+    score.append(parts['soprano'])
+    score.append(parts['alto'])
+    score.append(parts['tenor'])
+    score.append(parts['bass'])
 
     score.stripTies(inPlace=True, retainContainers=True)
-    staff_group = StaffGroup(list(parts.values()), symbol='bracket')
-    staff_group.barTogether = 'yes'
-    score.append(staff_group)
 
     return score

@@ -112,9 +112,9 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.ERROR)
 
     configs = []
-    for hidden_size in [300, 500, 700]:
+    for hidden_size in [700, 1000]:
         config = utils.Config({
-            'num_epochs': 200,
+            'num_epochs': 100,
             'batch_size': 8192,
             'num_workers': 8,
             'hidden_size': hidden_size,
