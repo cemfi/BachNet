@@ -62,8 +62,8 @@ class ChoralesDataset(Dataset):
                 part_transposed = []
                 for t in transpositions:
                     part_transposed.append(torch.cat([
-                        self.data[part_name][:, :pitch_size].roll(t, dims=1),
-                        self.data[part_name][:, pitch_size:]
+                        self.data[part_name][:, :len(indices_parts)],
+                        self.data[part_name][:, len(indices_parts):].roll(t, dims=1)
                     ], dim=1))
                 self.data[part_name] = torch.cat(part_transposed, dim=0)
 
@@ -71,7 +71,7 @@ class ChoralesDataset(Dataset):
         return self.data['soprano'].shape[0] - 2 * self.context_radius
 
     def __getitem__(self, idx):
-        # Return windowed parts from dataset for training and one hot vectors as targets
+        # Return windowed parts from dataset for training and correct "pitch classes" as targets
         return {
                    'soprano': self.data['soprano'][idx:idx + 2 * self.context_radius + 1],
                    'alto': self.data['alto'][idx:idx + self.context_radius],

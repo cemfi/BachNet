@@ -27,7 +27,7 @@ class Config(object):
     lr_step_size = 10
     lr_gamma = 0.95
     time_grid = 0.25
-    context_radius = 16
+    context_radius = 32
     checkpoint_root_dir = os.path.join('.', 'checkpoints')
     checkpoint_interval = None
     log_interval = 1
@@ -35,9 +35,9 @@ class Config(object):
     def __init__(self, config=None):
         if config is not None:
             self.explicit = config
+            self.__dict__.update(config)
         else:
             self.explicit = {}
-        self.__dict__.update(config)
 
     def __repr__(self):
         blacklist = ['checkpoint_root_dir', 'checkpoint_interval', 'use_cuda', 'num_epochs', 'num_workers', 'log_interval']
@@ -56,7 +56,7 @@ def generate_txt_output(data, path):
             fp.write('\n')
 
 
-def tensors_to_stream(outputs, config, metadata):
+def tensors_to_stream(outputs, config, metadata=None):
     cur_measure_number = 0
     parts = {}
     for part_name in outputs.keys():
@@ -127,9 +127,10 @@ def tensors_to_stream(outputs, config, metadata):
                 part[-1][-1].expressions.append(fermata)
 
     score = Score()
-    score.append(Metadata())
-    score.metadata.title = f"{metadata.title} ({metadata.number})"
-    score.metadata.composer = f"Melody: {metadata.composer}\nArrangement: BachNet ({datetime.now().year})"
+    if metadata is not None:
+        score.append(Metadata())
+        score.metadata.title = f"{metadata.title} ({metadata.number})"
+        score.metadata.composer = f"Melody: {metadata.composer}\nArrangement: BachNet ({datetime.now().year})"
     for part in parts.values():
         part[-1].rightBarline = 'light-heavy'
 

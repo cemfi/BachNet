@@ -126,6 +126,6 @@ if __name__ == '__main__':
     for c in [1, 5, 10]:
         main(
             soprano_path='./data/musicxml/120_soprano.musicxml',
-            checkpoint_path='./checkpoints/2019-06-05_10-31-32 batch_size=8192 hidden_size=400 context_radius=32 time_grid=0.25 lr=0.001 lr_gamma=0.98 lr_step_size=10/0210 batch_size=8192 hidden_size=400 context_radius=32 time_grid=0.25 lr=0.001 lr_gamma=0.98 lr_step_size=10.pt',
+            checkpoint_path='./checkpoints/2019-06-05_12-47-22 batch_size=8192 hidden_size=350 context_radius=32 time_grid=0.25 lr=0.001 lr_gamma=0.98 lr_step_size=10/0020 batch_size=8192 hidden_size=350 context_radius=32 time_grid=0.25 lr=0.001 lr_gamma=0.98 lr_step_size=10.pt',
             num_candidates=c
         )
