@@ -31,6 +31,7 @@ class Config(object):
     checkpoint_root_dir = os.path.join('.', 'checkpoints')
     checkpoint_interval = None
     log_interval = 1
+    transpositions = [-6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5]
 
     def __init__(self, config=None):
         if config is not None:

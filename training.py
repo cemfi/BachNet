@@ -33,7 +33,8 @@ def main(config):
         batch_size=config.batch_size,
         num_workers=config.num_workers,
         time_grid=config.time_grid,
-        context_radius=config.context_radius
+        context_radius=config.context_radius,
+        transpositions=config.transpositions
     )
 
     logging.debug('Creating model...')
@@ -113,7 +114,7 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.ERROR)
 
     configs = []
-    for hidden_size in [350, 400, 450]:
+    for hidden_size in [600, 700]:
         config = utils.Config({
             'num_epochs': 300,
             'batch_size': 8192,
@@ -124,7 +125,8 @@ if __name__ == '__main__':
             'lr': 0.001,
             'lr_gamma': 0.98,
             'lr_step_size': 10,
-            'checkpoint_interval': 10
+            'checkpoint_interval': 10,
+            # 'transpositions': [0]
         })
         configs.append(config)
 

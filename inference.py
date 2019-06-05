@@ -70,7 +70,7 @@ if __name__ == '__main__':
     # latest_checkpoint = sorted(glob('./checkpoints/**/*.pt'))[-1]
 
     main(
-        soprano_path='./data/musicxml/050_soprano.musicxml',
-        checkpoint_path='./checkpoints/2019-06-05_08-37-19 batch_size=8192 hidden_size=350 context_radius=32 time_grid=0.25 lr=0.001 lr_gamma=0.98 lr_step_size=10/0300 batch_size=8192 hidden_size=350 context_radius=32 time_grid=0.25 lr=0.001 lr_gamma=0.98 lr_step_size=10.pt'
+        soprano_path='./data/musicxml/112_soprano.musicxml',
+        checkpoint_path='./checkpoints/2019-06-05_19-16-15 batch_size=8192 hidden_size=500 context_radius=64 time_grid=0.25 lr=0.001 lr_gamma=0.98 lr_step_size=10/0040 batch_size=8192 hidden_size=500 context_radius=64 time_grid=0.25 lr=0.001 lr_gamma=0.98 lr_step_size=10.pt'
         # checkpoint_path=latest_checkpoint
     )

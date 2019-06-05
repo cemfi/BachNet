@@ -56,16 +56,19 @@ class ChoralesDataset(Dataset):
 
         # Data augmentation (transpositions)
         for part_name in self.data.keys():
-            if part_name == 'extra':
-                self.data[part_name] = self.data[part_name].repeat(len(transpositions), 1)
-            else:
-                part_transposed = []
-                for t in transpositions:
+            part_transposed = []
+            for t in transpositions:
+                if part_name == 'extra':
+                    sharps_offset = (t * 7) % 12
+                    transposed_part = self.data[part_name].clone()
+                    transposed_part[:, indices_extra['num_sharps']] = (transposed_part[:, indices_extra['num_sharps']] + sharps_offset) % 12
+                    part_transposed.append(transposed_part)
+                else:
                     part_transposed.append(torch.cat([
                         self.data[part_name][:, :len(indices_parts)],
                         self.data[part_name][:, len(indices_parts):].roll(t, dims=1)
                     ], dim=1))
-                self.data[part_name] = torch.cat(part_transposed, dim=0)
+            self.data[part_name] = torch.cat(part_transposed, dim=0)
 
     def __len__(self):
         return self.data['soprano'].shape[0] - 2 * self.context_radius

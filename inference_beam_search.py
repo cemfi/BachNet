@@ -114,18 +114,18 @@ def main(soprano_path, checkpoint_path, num_candidates):
         'tenor': one_hot(winner[2], data.part_size),
     }, config, metadata)
 
-    print(f"{c}\t{probabilities[-1]}")
-    # for e in zip(winner.t(), probabilities):
-    #     print(e)
+    # print(f"{c}\t{probabilities[-1]}")
+    for e in zip(winner.t(), probabilities):
+        print(e)
 
     # score.write('musicxml', f'beam_{num_candidates}.musicxml')
     score.show('musicxml')
 
 
 if __name__ == '__main__':
-    for c in [1, 5, 10]:
+    for c in [20]:
         main(
-            soprano_path='./data/musicxml/120_soprano.musicxml',
-            checkpoint_path='./checkpoints/2019-06-05_12-47-22 batch_size=8192 hidden_size=350 context_radius=32 time_grid=0.25 lr=0.001 lr_gamma=0.98 lr_step_size=10/0020 batch_size=8192 hidden_size=350 context_radius=32 time_grid=0.25 lr=0.001 lr_gamma=0.98 lr_step_size=10.pt',
+            soprano_path='./data/musicxml/112_soprano.musicxml',
+            checkpoint_path='./checkpoints/2019-06-05_19-16-15 batch_size=8192 hidden_size=500 context_radius=64 time_grid=0.25 lr=0.001 lr_gamma=0.98 lr_step_size=10/0040 batch_size=8192 hidden_size=500 context_radius=64 time_grid=0.25 lr=0.001 lr_gamma=0.98 lr_step_size=10.pt',
             num_candidates=c
         )
