@@ -6,11 +6,15 @@ import data
 import utils
 from model import BachNetInferenceWithBeamSearch
 
+
 # from music21 import environment
 # environment.set('musicxmlPath', 'C:\\Program Files\\MuseScore 3\\bin\\MuseScore3.exe')
 
 
 def main(soprano_path, checkpoint_path, num_candidates):
+    # Disable autograd to save a huge amount of memory
+    torch.set_grad_enabled(False)
+
     checkpoint = torch.load(checkpoint_path, map_location='cpu')
     config = checkpoint['config']
     state = checkpoint['state']
@@ -55,7 +59,7 @@ def main(soprano_path, checkpoint_path, num_candidates):
     cur_probabilities = predictions[:, 0]
     history = [predictions[:, 1:]]
 
-    for step in tqdm(range(1, length), unit='chords'):
+    for step in tqdm(range(1, length), unit='time steps'):
         candidates = []
         padding_size = max(0, config.context_radius - len(history))
         history_size = min(config.context_radius, len(history))
@@ -100,26 +104,28 @@ def main(soprano_path, checkpoint_path, num_candidates):
 
         probabilities.append(torch.max(cur_probabilities, dim=0)[0].item())
 
-    winner = torch.stack(history, dim=1)[torch.argmax(cur_probabilities)].long()
+    winner = torch.stack(history, dim=1)[torch.argmax(cur_probabilities)].long().t()
 
-    # print(winner)
-
-    outputs = {
+    score = utils.tensors_to_stream({
         'soprano': soprano,
         'extra': extra,
-        'bass': one_hot(winner.t()[0], data.part_size),
-        'alto': one_hot(winner.t()[1], data.part_size),
-        'tenor': one_hot(winner.t()[2], data.part_size),
-    }
+        'bass': one_hot(winner[0], data.part_size),
+        'alto': one_hot(winner[1], data.part_size),
+        'tenor': one_hot(winner[2], data.part_size),
+    }, config, metadata)
 
-    score = utils.tensors_to_stream(outputs, config, metadata)
-    score.show('musicxml')
+    print(f"{c}\t{probabilities[-1]}")
+    # for e in zip(winner.t(), probabilities):
+    #     print(e)
+
     # score.write('musicxml', f'beam_{num_candidates}.musicxml')
+    score.show('musicxml')
 
 
 if __name__ == '__main__':
-    main(
-        soprano_path='./data/musicxml/230 Christ, der du bist der helle Tag_soprano.musicxml',
-        checkpoint_path='./checkpoints/2019-06-04_01-03-06 batch_size=8192 hidden_size=100 context_radius=32 time_grid=0.25 lr=0.002/0200 batch_size=8192 hidden_size=100 context_radius=32 time_grid=0.25 lr=0.002.pt',
-        num_candidates=3
-    )
+    for c in [1, 5, 10]:
+        main(
+            soprano_path='./data/musicxml/120_soprano.musicxml',
+            checkpoint_path='./checkpoints/2019-06-05_10-31-32 batch_size=8192 hidden_size=400 context_radius=32 time_grid=0.25 lr=0.001 lr_gamma=0.98 lr_step_size=10/0210 batch_size=8192 hidden_size=400 context_radius=32 time_grid=0.25 lr=0.001 lr_gamma=0.98 lr_step_size=10.pt',
+            num_candidates=c
+        )

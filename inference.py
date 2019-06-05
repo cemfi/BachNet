@@ -6,6 +6,9 @@ from model import BachNetInference
 
 
 def main(soprano_path, checkpoint_path):
+    # Disable autograd to save a huge amount of memory
+    torch.set_grad_enabled(False)
+
     checkpoint = torch.load(checkpoint_path, map_location='cpu')
     config = checkpoint['config']
     state = checkpoint['state']
@@ -58,8 +61,8 @@ def main(soprano_path, checkpoint_path):
     outputs = {k: torch.cat(v, dim=0) for k, v in outputs.items()}
 
     score = utils.tensors_to_stream(outputs, config, metadata)
-    # score.show('musicxml')
-    score.write('musicxml', 'output.musicxml')
+    score.show('musicxml')
+    # score.write('musicxml', 'output.musicxml')
 
 
 if __name__ == '__main__':
@@ -67,7 +70,7 @@ if __name__ == '__main__':
     # latest_checkpoint = sorted(glob('./checkpoints/**/*.pt'))[-1]
 
     main(
-        soprano_path='./data/musicxml/230 Christ, der du bist der helle Tag_soprano.musicxml',
-        checkpoint_path='./0070 batch_size=8192 hidden_size=500 context_radius=32 time_grid=0.25 lr=0.002.pt'
+        soprano_path='./data/musicxml/050_soprano.musicxml',
+        checkpoint_path='./checkpoints/2019-06-05_08-37-19 batch_size=8192 hidden_size=350 context_radius=32 time_grid=0.25 lr=0.001 lr_gamma=0.98 lr_step_size=10/0300 batch_size=8192 hidden_size=350 context_radius=32 time_grid=0.25 lr=0.001 lr_gamma=0.98 lr_step_size=10.pt'
         # checkpoint_path=latest_checkpoint
     )

@@ -220,8 +220,8 @@ def _generate_data_training(time_grid, root_dir, overwrite, split):
             'title': chorale.metadata.title
         }, target_file_path)
 
-        chorale.write('musicxml', os.path.join(musicxml_dir, f'{str(chorale.metadata.number).zfill(3)} {chorale.metadata.title}_full.musicxml'))
-        chorale['Soprano'].write('musicxml', os.path.join(musicxml_dir, f'{str(chorale.metadata.number).zfill(3)} {chorale.metadata.title}_soprano.musicxml'))
+        chorale.write('musicxml', os.path.join(musicxml_dir, f'{str(chorale.metadata.number).zfill(3)}_full.musicxml'))
+        chorale['Soprano'].write('musicxml', os.path.join(musicxml_dir, f'{str(chorale.metadata.number).zfill(3)}_soprano.musicxml'))
 
     # Move files to train / test directories
     file_paths = glob(os.path.join(target_dir, '*.pt'))

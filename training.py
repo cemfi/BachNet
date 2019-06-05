@@ -59,13 +59,14 @@ def main(config):
             model.train() if phase == 'train' else model.eval()
             loss_list = []
 
-            for batch_idx, batch in enumerate(data_loaders[phase]):
-                inputs, targets = batch
-                # Transfer to device
-                inputs = {k: v.to(device) for k, v in inputs.items()}
-                targets = {k: v.to(device) for k, v in targets.items()}
+            with torch.set_grad_enabled(phase == 'train'):
 
-                with torch.set_grad_enabled(phase == 'train'):
+                for batch_idx, batch in enumerate(data_loaders[phase]):
+                    inputs, targets = batch
+                    # Transfer to device
+                    inputs = {k: v.to(device) for k, v in inputs.items()}
+                    targets = {k: v.to(device) for k, v in targets.items()}
+
                     predictions = model(inputs)
                     losses = {k: criterion(predictions[k], targets[k]) for k in targets.keys()}
                     loss = sum(losses.values())
@@ -76,17 +77,17 @@ def main(config):
                         loss.backward()
                         optimizer.step()
 
-                # Log current loss
-                if batch_idx % config.log_interval == 0:
-                    step = int((float(epoch) + (batch_idx / len(data_loaders[phase]))) * 1000)
-                    writer.add_scalars('loss', {phase: loss.item()}, step)
-                    writer.add_scalars('loss_per_parts', {f'{phase}_{k}': v for k, v in losses.items()}, step)
+                    # Log current loss
+                    if batch_idx % config.log_interval == 0:
+                        step = int((float(epoch) + (batch_idx / len(data_loaders[phase]))) * 1000)
+                        writer.add_scalars('loss', {phase: loss.item()}, step)
+                        writer.add_scalars('loss_per_parts', {f'{phase}_{k}': v for k, v in losses.items()}, step)
 
-            # Log mean loss per epoch
-            mean_loss_per_epoch = mean(loss_list)
-            loss_per_epoch[phase].append(mean_loss_per_epoch)
-            writer.add_scalars('loss', {phase + '_mean': mean_loss_per_epoch}, (epoch + 1) * 1000)
-            writer.file_writer.flush()
+                # Log mean loss per epoch
+                mean_loss_per_epoch = mean(loss_list)
+                loss_per_epoch[phase].append(mean_loss_per_epoch)
+                writer.add_scalars('loss', {phase + '_mean': mean_loss_per_epoch}, (epoch + 1) * 1000)
+                writer.file_writer.flush()
 
         lr_scheduler.step()
 
@@ -112,15 +113,17 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.ERROR)
 
     configs = []
-    for hidden_size in [700, 1000]:
+    for hidden_size in [350, 400, 450]:
         config = utils.Config({
-            'num_epochs': 100,
+            'num_epochs': 300,
             'batch_size': 8192,
-            'num_workers': 8,
+            'num_workers': 4,
             'hidden_size': hidden_size,
             'context_radius': 32,
             'time_grid': 0.25,
-            'lr': 0.002,
+            'lr': 0.001,
+            'lr_gamma': 0.98,
+            'lr_step_size': 10,
             'checkpoint_interval': 10
         })
         configs.append(config)
