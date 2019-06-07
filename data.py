@@ -46,29 +46,26 @@ class ChoralesDataset(Dataset):
         }
 
         # Concat all pieces into large tensors for each part
-        for file_path in glob(os.path.join(self.root_dir, '*.pt')):
+        for file_path in sorted(glob(os.path.join(self.root_dir, '*.pt'))):
             data = torch.load(file_path)['data']
             for part_name, part_data in data.items():
-                self.data[part_name].append(
-                    torch.cat((part_data, torch.zeros((context_radius, part_data.shape[1]))), dim=0))
-        for part_name, part_data in self.data.items():
-            self.data[part_name] = torch.cat(self.data[part_name], dim=0).float()
+                part_transposed = []
+                for t in transpositions:
+                    if part_name == 'extra':
+                        sharps_offset = (t * 7) % 12
+                        part_cloned = part_data.clone()
+                        part_cloned[:, indices_extra['num_sharps']] = (part_cloned[:, indices_extra['num_sharps']] + sharps_offset) % 12
+                        part_transposed.append(part_cloned)
+                    else:
+                        part_transposed.append(torch.cat([
+                            part_data[:, :len(indices_parts)],
+                            part_data[:, len(indices_parts):].roll(t, dims=1)
+                        ], dim=1))
+                    part_transposed.append(torch.zeros((context_radius, part_data.shape[1])))
+                self.data[part_name].append(torch.cat(part_transposed, dim=0))
 
-        # Data augmentation (transpositions)
-        for part_name in self.data.keys():
-            part_transposed = []
-            for t in transpositions:
-                if part_name == 'extra':
-                    sharps_offset = (t * 7) % 12
-                    transposed_part = self.data[part_name].clone()
-                    transposed_part[:, indices_extra['num_sharps']] = (transposed_part[:, indices_extra['num_sharps']] + sharps_offset) % 12
-                    part_transposed.append(transposed_part)
-                else:
-                    part_transposed.append(torch.cat([
-                        self.data[part_name][:, :len(indices_parts)],
-                        self.data[part_name][:, len(indices_parts):].roll(t, dims=1)
-                    ], dim=1))
-            self.data[part_name] = torch.cat(part_transposed, dim=0)
+        for part_name, part_data in self.data.items():
+            self.data[part_name] = torch.cat(part_data, dim=0)
 
     def __len__(self):
         return self.data['soprano'].shape[0] - 2 * self.context_radius
@@ -89,7 +86,8 @@ class ChoralesDataset(Dataset):
 
 
 def generate_data_inference(time_grid, soprano_path):
-    stream = converter.parse(soprano_path).flat
+    stream = converter.parse(soprano_path)
+
     length = math.ceil(stream.highestTime / time_grid)
     data = {
         'extra': torch.zeros((length, len(indices_extra))),
@@ -97,12 +95,8 @@ def generate_data_inference(time_grid, soprano_path):
     }
 
     # Iterate through all musical elements in current voice stream
-    for element in stream:
+    for element in stream.flat:
         offset = int(element.offset / time_grid)
-
-        if type(element) in [Note, Rest]:
-            # Save position ("beat") in measure
-            data['extra'][offset, indices_extra['time_pos']] = element.beat
 
         if type(element) == Note:
             # Skip grace notes
@@ -132,6 +126,16 @@ def generate_data_inference(time_grid, soprano_path):
         if type(element) == KeySignature or type(element) == Key:
             data['extra'][offset:, indices_extra['num_sharps']] = element.sharps
 
+    measure_offsets = [o / time_grid for o in stream.measureOffsetMap().keys()]
+    cur_offset = stream.flat.notesAndRests[0].beat
+    data['extra'][0, indices_extra['time_pos']] = cur_offset
+    for offset in range(1, length):
+        if offset in measure_offsets:
+            cur_offset = 1
+        else:
+            cur_offset += time_grid
+        data['extra'][offset, indices_extra['time_pos']] = cur_offset
+
     return {
         'data': data,
         'metadata': stream.metadata
@@ -143,6 +147,9 @@ def _generate_data_training(time_grid, root_dir, overwrite, split):
 
     if os.path.exists(target_dir) and not overwrite:
         return target_dir
+
+    if overwrite:
+        shutil.rmtree(root_dir)
 
     train_dir = os.path.join(target_dir, 'train')
     test_dir = os.path.join(target_dir, 'test')
@@ -160,10 +167,10 @@ def _generate_data_training(time_grid, root_dir, overwrite, split):
         # Skip if parts do not contain correct choral voices
         try:
             streams = {
-                'soprano': chorale['Soprano'].flat,
-                'alto': chorale['Alto'].flat,
-                'tenor': chorale['Tenor'].flat,
-                'bass': chorale['Bass'].flat
+                'soprano': chorale['Soprano'],
+                'alto': chorale['Alto'],
+                'tenor': chorale['Tenor'],
+                'bass': chorale['Bass']
             }
         except KeyError:
             continue
@@ -173,6 +180,7 @@ def _generate_data_training(time_grid, root_dir, overwrite, split):
             'extra': torch.zeros((length, len(indices_extra)))
         }
         for part_name, part in streams.items():
+            part = part.flat
             # Init empty tensor for current voice
             data[part_name] = torch.zeros((length, part_size))
 
@@ -184,10 +192,6 @@ def _generate_data_training(time_grid, root_dir, overwrite, split):
                     # Skip grace notes
                     if element.duration.quarterLength == 0:
                         continue
-
-                    if part_name == 'soprano':
-                        # Save position ("beat") in measure
-                        data['extra'][offset, indices_extra['time_pos']] = element.beat
 
                     pitch = element.pitch.midi - pitch_size // 2 + len(indices_parts)
                     duration = int(element.duration.quarterLength / time_grid)
@@ -205,10 +209,6 @@ def _generate_data_training(time_grid, root_dir, overwrite, split):
                     data[part_name][offset, indices_parts['is_rest']] = 1
                     data[part_name][offset + 1:offset + duration, indices_parts['is_continued']] = 1
 
-                    if part_name == 'soprano':
-                        # Save position ("beat") in measure
-                        data['extra'][offset, indices_extra['time_pos']] = element.beat
-
                 if part_name == 'soprano':
                     if type(element) == TimeSignature:
                         data['extra'][offset:, indices_extra['time_numerator']] = element.numerator
@@ -216,6 +216,16 @@ def _generate_data_training(time_grid, root_dir, overwrite, split):
 
                     if type(element) == KeySignature or type(element) == Key:
                         data['extra'][offset:, indices_extra['num_sharps']] = element.sharps
+
+        measure_offsets = [o / time_grid for o in streams['soprano'].measureOffsetMap().keys()]
+        cur_offset = streams['soprano'].flat.notesAndRests[0].beat
+        data['extra'][0, indices_extra['time_pos']] = cur_offset
+        for offset in range(1, length):
+            if offset in measure_offsets:
+                cur_offset = 1
+            else:
+                cur_offset += time_grid
+            data['extra'][offset, indices_extra['time_pos']] = cur_offset
 
         target_file_path = os.path.join(target_dir, f'{str(chorale.metadata.number).zfill(3)}.pt')
         torch.save({
@@ -302,4 +312,4 @@ def get_data_loaders(time_grid=0.25, root_dir=None, overwrite=False, split=0.15,
 
 
 if __name__ == '__main__':
-    get_data_loaders()
+    get_data_loaders(overwrite=True)

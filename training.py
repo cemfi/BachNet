@@ -34,7 +34,8 @@ def main(config):
         num_workers=config.num_workers,
         time_grid=config.time_grid,
         context_radius=config.context_radius,
-        transpositions=config.transpositions
+        transpositions=config.transpositions,
+        split=config.split,
     )
 
     logging.debug('Creating model...')
@@ -111,7 +112,7 @@ def main(config):
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.ERROR)
+    logging.basicConfig(level=logging.DEBUG)
 
     configs = []
     for hidden_size in [600, 700]:
@@ -126,6 +127,7 @@ if __name__ == '__main__':
             'lr_gamma': 0.98,
             'lr_step_size': 10,
             'checkpoint_interval': 10,
+            'split': 0.05,
             # 'transpositions': [0]
         })
         configs.append(config)

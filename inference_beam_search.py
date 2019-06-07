@@ -118,14 +118,20 @@ def main(soprano_path, checkpoint_path, num_candidates):
     for e in zip(winner.t(), probabilities):
         print(e)
 
-    # score.write('musicxml', f'beam_{num_candidates}.musicxml')
+    score.write('musicxml', f'beam_{num_candidates}.musicxml')
     score.show('musicxml')
 
 
 if __name__ == '__main__':
-    for c in [20]:
-        main(
-            soprano_path='./data/musicxml/112_soprano.musicxml',
-            checkpoint_path='./checkpoints/2019-06-05_19-16-15 batch_size=8192 hidden_size=500 context_radius=64 time_grid=0.25 lr=0.001 lr_gamma=0.98 lr_step_size=10/0040 batch_size=8192 hidden_size=500 context_radius=64 time_grid=0.25 lr=0.001 lr_gamma=0.98 lr_step_size=10.pt',
-            num_candidates=c
-        )
+    import os
+    from glob import glob
+
+    latest_checkpoint = sorted(glob('./checkpoints/**/*.pt'))[-1]
+    print(os.path.split(latest_checkpoint)[-1])
+
+    main(
+        soprano_path='./data/musicxml/003_soprano.musicxml',
+        # checkpoint_path='./checkpoints/2019-06-06_12-17-46 batch_size=8192 hidden_size=500 context_radius=32 time_grid=0.25 lr=0.001 lr_gamma=0.98 lr_step_size=10/0010 batch_size=8192 hidden_size=500 context_radius=32 time_grid=0.25 lr=0.001 lr_gamma=0.98 lr_step_size=10.pt'
+        checkpoint_path=latest_checkpoint,
+        num_candidates=3
+    )
