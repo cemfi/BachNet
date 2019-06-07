@@ -87,7 +87,7 @@ def main(soprano_path, checkpoint_path, num_candidates):
         candidates = torch.stack(candidates, dim=0)
         # 0: Index for chord in history[-1]
         # 1: Candidate idx
-        # 2: Probability 1 Pitches
+        # 2: Probability Pitches
 
         # Multiply probabilities of candidates with current probabilities
         candidates[:, :, 0] = cur_probabilities.t() * candidates[:, :, 0]
@@ -126,12 +126,12 @@ if __name__ == '__main__':
     import os
     from glob import glob
 
-    latest_checkpoint = sorted(glob('./checkpoints/**/*.pt'))[-1]
-    print(os.path.split(latest_checkpoint)[-1])
+    # latest_checkpoint = sorted(glob('./checkpoints/**/*.pt'))[-1]
+    # print(os.path.split(latest_checkpoint)[-1])
 
     main(
-        soprano_path='./data/musicxml/003_soprano.musicxml',
-        # checkpoint_path='./checkpoints/2019-06-06_12-17-46 batch_size=8192 hidden_size=500 context_radius=32 time_grid=0.25 lr=0.001 lr_gamma=0.98 lr_step_size=10/0010 batch_size=8192 hidden_size=500 context_radius=32 time_grid=0.25 lr=0.001 lr_gamma=0.98 lr_step_size=10.pt'
-        checkpoint_path=latest_checkpoint,
-        num_candidates=3
+        soprano_path='./data/musicxml/030_soprano.musicxml',
+        checkpoint_path='./checkpoints/0090 batch_size=8192 hidden_size=600 context_radius=32 time_grid=0.25 lr=0.001 lr_gamma=0.98 lr_step_size=10 split=0.05.pt',
+        # checkpoint_path=latest_checkpoint,
+        num_candidates=62
     )

@@ -284,8 +284,8 @@ def _make_data_loaders(root_dir, batch_size, num_workers, context_radius, transp
     return {
         'train': train_data_loader,
         'test': test_data_loader,
-        'input_size': (part_size) * 4 + len(indices_extra),
-        'output_sizes': (part_size)
+        'input_size': part_size * 4 + len(indices_extra),
+        'output_sizes': part_size
     }
 
 

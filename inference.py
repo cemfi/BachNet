@@ -68,11 +68,11 @@ def main(soprano_path, checkpoint_path):
 if __name__ == '__main__':
     import os
     from glob import glob
-    latest_checkpoint = sorted(glob('./checkpoints/**/*.pt'))[-1]
-    print(os.path.split(latest_checkpoint)[-1])
+    #latest_checkpoint = sorted(glob('./checkpoints/**/*.pt'))[-1]
+    #print(os.path.split(latest_checkpoint)[-1])
 
     main(
-        soprano_path='./data/musicxml/003_soprano.musicxml',
-        # checkpoint_path='./checkpoints/2019-06-06_12-17-46 batch_size=8192 hidden_size=500 context_radius=32 time_grid=0.25 lr=0.001 lr_gamma=0.98 lr_step_size=10/0010 batch_size=8192 hidden_size=500 context_radius=32 time_grid=0.25 lr=0.001 lr_gamma=0.98 lr_step_size=10.pt'
-        checkpoint_path=latest_checkpoint
+        soprano_path='./data/musicxml/127_soprano.musicxml',
+        checkpoint_path='./checkpoints/0300 batch_size=8192 hidden_size=600 context_radius=32 time_grid=0.25 lr=0.001 lr_gamma=0.98 lr_step_size=10 split=0.05.pt'
+        # checkpoint_path=latest_checkpoint
     )

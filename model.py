@@ -58,6 +58,7 @@ class BachNetTraining(BachNetBase):
         batch_size = inputs['soprano'].shape[0]
 
         inputs_bass = torch.cat([v.view(batch_size, -1) for v in inputs.values()], dim=1)
+
         outputs_bass = self.bass(inputs_bass)
         prediction_bass = one_hot(torch.max(outputs_bass, dim=1)[1], part_size).float()
 
@@ -108,7 +109,6 @@ class BachNetInferenceWithBeamSearch(BachNetBase):
         # Bass #################################################################
         inputs_bass = torch.cat([v.view(1, -1) for v in inputs.values()], dim=1).squeeze()  # !!! SQUEEZED !!!
         outputs_bass = self.bass(inputs_bass)
-
         probabilities, pitches = torch.sort(torch.softmax(outputs_bass, dim=0), dim=0, descending=True)
         results[:, 0] = probabilities[:self.num_candidates]
         results[:, 1] = pitches[:self.num_candidates]
@@ -125,7 +125,8 @@ class BachNetInferenceWithBeamSearch(BachNetBase):
         probabilities, pitches_indicies = torch.sort(probabilities.t().contiguous().view(1, -1).squeeze(), dim=0, descending=True)
 
         pitches_alto = pitches_indicies % part_size
-        pitches_bass = results[:, 1][pitches_indicies // part_size]
+        history_indices = pitches_indicies // part_size
+        pitches_bass = results[:, 1][history_indices]
 
         results[:, 0] = probabilities[:self.num_candidates]
         results[:, 1] = pitches_bass[:self.num_candidates]
@@ -144,8 +145,9 @@ class BachNetInferenceWithBeamSearch(BachNetBase):
         probabilities, pitches_indicies = torch.sort(probabilities.t().contiguous().view(1, -1).squeeze(), dim=0, descending=True)
 
         pitches_tenor = pitches_indicies % part_size
-        pitches_bass = results[:, 1][pitches_indicies // part_size]
-        pitches_alto = results[:, 2][pitches_indicies // part_size]
+        history_indices = pitches_indicies // part_size
+        pitches_bass = results[:, 1][history_indices]
+        pitches_alto = results[:, 2][history_indices]
 
         results[:, 0] = probabilities[:self.num_candidates]
         results[:, 1] = pitches_bass[:self.num_candidates]
@@ -153,3 +155,32 @@ class BachNetInferenceWithBeamSearch(BachNetBase):
         results[:, 3] = pitches_tenor[:self.num_candidates]
 
         return results
+
+
+class BachNetTraining2Pass1(torch.nn.Module):
+    def __init__(self, hidden_size, context_radius, dropout=0.5):
+        super(BachNetTraining2Pass1, self).__init__()
+        input_size = (context_radius + 1) * part_size + \
+                     (2 * context_radius + 1) * len(indices_extra)
+
+        self.bass = torch.nn.Sequential(
+            torch.nn.Linear(input_size, hidden_size),
+            torch.nn.SELU(),
+            torch.nn.Dropout(dropout),
+            # torch.nn.Linear(hidden_size, hidden_size),
+            # torch.nn.SELU(),
+            # torch.nn.Dropout(dropout),
+            torch.nn.Linear(hidden_size, hidden_size),
+            torch.nn.SELU(),
+            torch.nn.Dropout(dropout),
+            torch.nn.Linear(hidden_size, part_size),
+        )
+
+    def forward(self, inputs):
+        batch_size = inputs['soprano'].shape[0]
+
+        inputs_bass = torch.cat([v.view(batch_size, -1) for v in inputs.values()], dim=1)
+
+        outputs_bass = self.bass(inputs_bass)
+
+        return outputs_bass
