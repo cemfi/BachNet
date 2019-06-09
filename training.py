@@ -83,7 +83,7 @@ def main(config):
                     if batch_idx % config.log_interval == 0:
                         step = int((float(epoch) + (batch_idx / len(data_loaders[phase]))) * 1000)
                         writer.add_scalars('loss', {phase: loss.item()}, step)
-                        writer.adpid_scalars('loss_per_parts', {f'{phase}_{k}': v for k, v in losses.items()}, step)
+                        writer.add_scalars('loss_per_parts', {f'{phase}_{k}': v for k, v in losses.items()}, step)
 
                 # Log mean loss per epoch
                 mean_loss_per_epoch = mean(loss_list)

@@ -74,6 +74,6 @@ if __name__ == '__main__':
 
     main(
         soprano_path='./data/musicxml/030_soprano.musicxml',
-        checkpoint_path='./checkpoints/cp120.pt'
+        checkpoint_path='./checkpoints/2019-06-09_16-55-42 batch_size=8192 hidden_size=500 context_radius=32 time_grid=0.25 lr=0.001 lr_gamma=0.98 lr_step_size=10 split=0.05/0070 batch_size=8192 hidden_size=500 context_radius=32 time_grid=0.25 lr=0.001 lr_gamma=0.98 lr_step_size=10 split=0.05.pt'
         # checkpoint_path=latest_checkpoint
     )
