@@ -90,7 +90,7 @@ def main(soprano_path, checkpoint_path, num_candidates):
         # 2: Probability Pitches
 
         # Multiply probabilities of candidates with current probabilities
-        candidates[:, :, 0] = cur_probabilities.t() * candidates[:, :, 0]
+        candidates[:, :, 0] = cur_probabilities.t() + candidates[:, :, 0]
 
         candidate_indices = torch.argsort(candidates.view(-1, 4)[:, 0], dim=0, descending=True)
         best_indices = torch.stack([candidate_indices // num_candidates, candidate_indices % num_candidates], dim=1)[:num_candidates]
