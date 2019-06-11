@@ -19,7 +19,6 @@ def main(config):
 
     # Prepare logging
     date = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    checkpoint_dir = os.path.join(config.checkpoint_root_dir, f'{date} {str(config)}')
     log_dir = os.path.join('.', 'runs', f'{date} {str(config)}')
     writer = SummaryWriter(log_dir=log_dir)
 
@@ -53,13 +52,17 @@ def main(config):
     criterion = torch.nn.CrossEntropyLoss().to(device)
 
     logging.debug('Training and testing...')
-    loss_per_epoch = {'train': [], 'test': []}
     # for epoch in range(config.num_epochs):
     for epoch in trange(config.num_epochs, unit='epoch'):
 
         for phase in ['train', 'test']:
             model.train() if phase == 'train' else model.eval()
-            loss_list = []
+            loss_lists = {
+                'all': [],
+                'bass': [],
+                'alto': [],
+                'tenor': []
+            }
 
             with torch.set_grad_enabled(phase == 'train'):
 
@@ -72,7 +75,9 @@ def main(config):
                     predictions = model(inputs)
                     losses = {k: criterion(predictions[k], targets[k]) for k in targets.keys()}
                     loss = sum(losses.values())
-                    loss_list.append(loss.item())
+                    loss_lists['all'].append(loss.item())
+                    for k in losses.keys():
+                        loss_lists[k].append(losses[k].item())
 
                     if phase == 'train':
                         optimizer.zero_grad()
@@ -86,27 +91,24 @@ def main(config):
                         writer.add_scalars('loss_per_parts', {f'{phase}_{k}': v for k, v in losses.items()}, step)
 
                 # Log mean loss per epoch
-                mean_loss_per_epoch = mean(loss_list)
-                loss_per_epoch[phase].append(mean_loss_per_epoch)
+                mean_loss_per_epoch = mean(loss_lists['all'])
                 writer.add_scalars('loss', {phase + '_mean': mean_loss_per_epoch}, (epoch + 1) * 1000)
                 writer.file_writer.flush()
 
         lr_scheduler.step()
 
         if config.checkpoint_interval is not None and (epoch + 1) % config.checkpoint_interval == 0:
-            os.makedirs(checkpoint_dir, exist_ok=True)
-            checkpoint_path = os.path.join(checkpoint_dir, f'{str(epoch + 1).zfill(4)} {str(config)}.pt')
+            os.makedirs(config.checkpoint_root_dir, exist_ok=True)
+            checkpoint_path = os.path.join(config.checkpoint_root_dir, f'{date} {str(config)} {str(epoch + 1).zfill(4)}.pt')
             torch.save({
                 'config': config,
                 'state': model.state_dict(),
                 'epoch': epoch,
-                'losses_train': loss_per_epoch['train'],
-                'losses_test': loss_per_epoch['test'],
-            }, checkpoint_path)
+                'loss_bass': mean(loss_lists['bass']),
+                'loss_alto': mean(loss_lists['alto']),
+                'loss_tenor': mean(loss_lists['tenor'])
 
-    min_test_loss = min(loss_per_epoch['test'])
-    min_test_loss_idx = loss_per_epoch['test'].index(min_test_loss)
-    logging.info(f'Lowest testing loss after epoch {min_test_loss_idx}: {min_test_loss}')
+            }, checkpoint_path)
 
     writer.close()
 
@@ -115,20 +117,19 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
 
     configs = []
-    for hidden_size in [500]:
+    for hidden_size in [600]:
         config = utils.Config({
-            'num_epochs': 300,
+            'num_epochs': 200,
             'batch_size': 8192,
             'num_workers': 4,
             'hidden_size': hidden_size,
             'context_radius': 32,
             'time_grid': 0.25,
             'lr': 0.001,
-            'lr_gamma': 0.98,
+            'lr_gamma': 0.95,
             'lr_step_size': 10,
             'checkpoint_interval': 10,
             'split': 0.05,
-            # 'transpositions': [0]
         })
         configs.append(config)
 
@@ -136,7 +137,3 @@ if __name__ == '__main__':
 
     for config in tqdm(configs):
         main(config)
-
-    # from concurrent.futures import ThreadPoolExecutor
-    # with ThreadPoolExecutor(max_workers=2) as executor:
-    #     executor.map(main, configs)
