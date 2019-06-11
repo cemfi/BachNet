@@ -40,7 +40,9 @@ def main(config):
     logging.debug('Creating model...')
     model_continuo = BachNetTrainingContinuo(
         hidden_size=config.hidden_size,
-        context_radius=config.context_radius
+        context_radius=config.context_radius,
+        full_context_number=1,
+        half_context_number=1
     ).to(device)
     model_middleparts = BachNetTrainingMiddleParts(
         hidden_size=config.hidden_size,
@@ -83,19 +85,22 @@ def main(config):
                     # Transfer to device
                     inputs_for_continuo = {k: inputs[k].to(device) for k in ['soprano', 'bass', 'extra']}
                     inputs_for_middleparts = {k: inputs[k].to(device) for k in ['soprano', 'alto', 'tenor', 'bass_withcontext', 'extra']}
-                    targets = {k: targets[k].to(device) for k in ['soprano', 'bass']}
+                    targets_continuo = {k: targets[k].to(device) for k in ['bass']}
+                    targets_middleparts = {k: targets[k].to(device) for k in ['alto', 'tenor']}
 
-                    predictions = model_continuo(inputs_for_continuo)
-                    losses = {k: criterion(predictions[k], targets[k]) for k in targets.keys()}
+                    predictions_continuo = model_continuo(inputs_for_continuo)
+                    losses_continuo = {k: criterion(predictions_continuo[k], targets_continuo[k]) for k in targets_continuo.keys()}
 
-                    loss = sum(losses.values())
+                    predictions_middleparts = model_middleparts(inputs_for_middleparts)
+                    losses_middleparts = {k: criterion(predictions_middleparts[k], targets_middleparts[k]) for k in targets_middleparts.keys()}
 
-                    #loss_lists['all'].append(loss.item())
-                    #for k in losses.keys():
-                    #    loss_lists[k].append(losses[k].item())
+                    loss = sum([sum(losses_middleparts.values()), sum(losses_continuo.values())])
 
-                    predictions = model_middleparts(inputs_for_middleparts)
-                    losses = {k: criterion(predictions[k], targets[k]) for k in targets.keys()}
+                    loss_lists['all'].append(loss.item())
+                    for k in losses_continuo.keys():
+                        loss_lists[k].append(losses_continuo[k].item())
+                    for k in losses_middleparts.keys():
+                        loss_lists[k].append(losses_middleparts[k].item())
 
                     if phase == 'train':
                         optimizer_continuo.zero_grad()
@@ -108,7 +113,8 @@ def main(config):
                     if batch_idx % config.log_interval == 0:
                         step = int((float(epoch) + (batch_idx / len(data_loaders[phase]))) * 1000)
                         writer.add_scalars('loss', {phase: loss.item()}, step)
-                        writer.add_scalars('loss_per_parts', {f'{phase}_{k}': v for k, v in losses.items()}, step)
+                        writer.add_scalars('loss_per_parts', {f'{phase}_{k}': v for k, v in losses_continuo.items()}, step)
+                        writer.add_scalars('loss_per_parts', {f'{phase}_{k}': v for k, v in losses_middleparts.items()}, step)
 
                 # Log mean loss per epoch
                 mean_loss_per_epoch = mean(loss_lists['all'])
@@ -123,7 +129,8 @@ def main(config):
             checkpoint_path = os.path.join(config.checkpoint_root_dir, f'{date} {str(config)} {str(epoch + 1).zfill(4)}.pt')
             torch.save({
                 'config': config,
-                'state': model.state_dict(),
+                'state_continuo': model_continuo.state_dict(),
+                'state_middleparts': model_middleparts.state_dict(),
                 'epoch': epoch,
                 'loss_bass': mean(loss_lists['bass']),
                 'loss_alto': mean(loss_lists['alto']),
@@ -138,7 +145,7 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
 
     configs = []
-    for hidden_size in [600]:
+    for hidden_size in [30]:
         config = utils.Config({
             'num_epochs': 200,
             'batch_size': 8192,
@@ -149,7 +156,7 @@ if __name__ == '__main__':
             'lr': 0.001,
             'lr_gamma': 0.95,
             'lr_step_size': 10,
-            'checkpoint_interval': 10,
+            'checkpoint_interval': 1,
             'split': 0.05,
         })
         configs.append(config)

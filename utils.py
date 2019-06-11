@@ -150,8 +150,8 @@ def tensors_to_stream(outputs, config, metadata=None):
         part[-1].rightBarline = 'light-heavy'
 
     score.append(parts['soprano'])
-    score.append(parts['alto'])
-    score.append(parts['tenor'])
+    #score.append(parts['alto'])
+    #score.append(parts['tenor'])
     score.append(parts['bass'])
 
     score.stripTies(inPlace=True, retainContainers=True)
