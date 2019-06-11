@@ -76,6 +76,7 @@ class ChoralesDataset(Dataset):
                    'soprano': self.data['soprano'][idx:idx + 2 * self.context_radius + 1],
                    'alto': self.data['alto'][idx:idx + self.context_radius],
                    'tenor': self.data['tenor'][idx:idx + self.context_radius],
+                   'bass_withcontext': self.data['bass'][idx:idx + 2 * self.context_radius + 1],
                    'bass': self.data['bass'][idx:idx + self.context_radius],
                    'extra': self.data['extra'][idx:idx + 2 * self.context_radius + 1]
                }, {

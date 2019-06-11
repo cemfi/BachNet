@@ -11,7 +11,7 @@ from tqdm import trange
 
 import data
 import utils
-from model import BachNetTraining
+from model import BachNetTrainingContinuo, BachNetTrainingMiddleParts
 
 
 def main(config):
@@ -38,14 +38,25 @@ def main(config):
     )
 
     logging.debug('Creating model...')
-    model = BachNetTraining(
+    model_continuo = BachNetTrainingContinuo(
         hidden_size=config.hidden_size,
         context_radius=config.context_radius
     ).to(device)
-    params = [p for p in model.parameters() if p.requires_grad]
-    optimizer = torch.optim.Adam(params, lr=config.lr)
-    lr_scheduler = torch.optim.lr_scheduler.StepLR(
-        optimizer,
+    model_middleparts = BachNetTrainingMiddleParts(
+        hidden_size=config.hidden_size,
+        context_radius=config.context_radius
+    ).to(device)
+    params_continuo = [p for p in model_continuo.parameters() if p.requires_grad]
+    params_middleparts = [p for p in model_middleparts.parameters() if p.requires_grad]
+    optimizer_continuo = torch.optim.Adam(params_continuo, lr=config.lr)
+    optimizer_middleparts = torch.optim.Adam(params_middleparts, lr=config.lr)
+    lr_scheduler_continuo = torch.optim.lr_scheduler.StepLR(
+        optimizer_continuo,
+        step_size=config.lr_step_size,
+        gamma=config.lr_gamma,
+    )
+    lr_scheduler_middleparts = torch.optim.lr_scheduler.StepLR(
+        optimizer_middleparts,
         step_size=config.lr_step_size,
         gamma=config.lr_gamma,
     )
@@ -56,7 +67,8 @@ def main(config):
     for epoch in trange(config.num_epochs, unit='epoch'):
 
         for phase in ['train', 'test']:
-            model.train() if phase == 'train' else model.eval()
+            model_continuo.train() if phase == 'train' else model_continuo.eval()
+            model_middleparts.train() if phase == 'train' else model_middleparts.eval()
             loss_lists = {
                 'all': [],
                 'bass': [],
@@ -69,20 +81,28 @@ def main(config):
                 for batch_idx, batch in enumerate(data_loaders[phase]):
                     inputs, targets = batch
                     # Transfer to device
-                    inputs = {k: v.to(device) for k, v in inputs.items()}
-                    targets = {k: v.to(device) for k, v in targets.items()}
+                    inputs_for_continuo = {k: inputs[k].to(device) for k in ['soprano', 'bass', 'extra']}
+                    inputs_for_middleparts = {k: inputs[k].to(device) for k in ['soprano', 'alto', 'tenor', 'bass_withcontext', 'extra']}
+                    targets = {k: targets[k].to(device) for k in ['soprano', 'bass']}
 
-                    predictions = model(inputs)
+                    predictions = model_continuo(inputs_for_continuo)
                     losses = {k: criterion(predictions[k], targets[k]) for k in targets.keys()}
+
                     loss = sum(losses.values())
-                    loss_lists['all'].append(loss.item())
-                    for k in losses.keys():
-                        loss_lists[k].append(losses[k].item())
+
+                    #loss_lists['all'].append(loss.item())
+                    #for k in losses.keys():
+                    #    loss_lists[k].append(losses[k].item())
+
+                    predictions = model_middleparts(inputs_for_middleparts)
+                    losses = {k: criterion(predictions[k], targets[k]) for k in targets.keys()}
 
                     if phase == 'train':
-                        optimizer.zero_grad()
+                        optimizer_continuo.zero_grad()
+                        optimizer_middleparts.zero_grad()
                         loss.backward()
-                        optimizer.step()
+                        optimizer_continuo.step()
+                        optimizer_middleparts.step()
 
                     # Log current loss
                     if batch_idx % config.log_interval == 0:
@@ -95,7 +115,8 @@ def main(config):
                 writer.add_scalars('loss', {phase + '_mean': mean_loss_per_epoch}, (epoch + 1) * 1000)
                 writer.file_writer.flush()
 
-        lr_scheduler.step()
+        lr_scheduler_continuo.step()
+        lr_scheduler_middleparts.step()
 
         if config.checkpoint_interval is not None and (epoch + 1) % config.checkpoint_interval == 0:
             os.makedirs(config.checkpoint_root_dir, exist_ok=True)

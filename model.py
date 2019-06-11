@@ -46,15 +46,25 @@ class BachNetBase(torch.nn.Module):
         raise NotImplementedError()
 
 
-class BachNetTraining(BachNetBase):
+class BachNetTrainingContinuo(BachNetBase):
     def forward(self, inputs):
         batch_size = inputs['soprano'].shape[0]
-        inputs_bass = torch.cat([inputs[k].view(batch_size, -1) for k in ['soprano', 'alto', 'tenor', 'bass', 'extra']], dim=1)
+        inputs_bass = torch.cat([inputs[k].view(batch_size, -1) for k in ['soprano', 'bass', 'extra']], dim=1)
 
         outputs_bass = self.bass(inputs_bass)
         prediction_bass = one_hot(torch.max(outputs_bass, dim=1)[1], part_size).float()
 
-        inputs_alto = torch.cat([inputs_bass, prediction_bass], dim=1)
+        return {
+            'bass': outputs_bass
+        }
+
+
+class BachNetTrainingMiddleParts(BachNetBase):
+    def forward(self, inputs):
+        batch_size = inputs['soprano'].shape[0]
+        inputs_alto = torch.cat(
+            [inputs[k].view(batch_size, -1) for k in ['soprano', 'alto', 'tenor', 'bass', 'extra']], dim=1)
+
         outputs_alto = self.alto(inputs_alto)
         prediction_alto = one_hot(torch.max(outputs_alto, dim=1)[1], part_size).float()
 
@@ -63,8 +73,7 @@ class BachNetTraining(BachNetBase):
 
         return {
             'alto': outputs_alto,
-            'tenor': outputs_tenor,
-            'bass': outputs_bass
+            'tenor': outputs_tenor
         }
 
 
