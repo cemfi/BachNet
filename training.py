@@ -33,7 +33,6 @@ def main(config):
         num_workers=config.num_workers,
         time_grid=config.time_grid,
         context_radius=config.context_radius,
-        transpositions=config.transpositions,
         split=config.split,
     )
 
@@ -41,17 +40,16 @@ def main(config):
     model_continuo = BachNetTrainingContinuo(
         hidden_size=config.hidden_size,
         context_radius=config.context_radius,
-        full_context_number=1,
-        half_context_number=1
     ).to(device)
-    model_middleparts = BachNetTrainingMiddleParts(
+    model_middle_parts = BachNetTrainingMiddleParts(
         hidden_size=config.hidden_size,
         context_radius=config.context_radius
     ).to(device)
     params_continuo = [p for p in model_continuo.parameters() if p.requires_grad]
-    params_middleparts = [p for p in model_middleparts.parameters() if p.requires_grad]
+    params_middleparts = [p for p in model_middle_parts.parameters() if p.requires_grad]
     optimizer_continuo = torch.optim.Adam(params_continuo, lr=config.lr)
     optimizer_middleparts = torch.optim.Adam(params_middleparts, lr=config.lr)
+
     lr_scheduler_continuo = torch.optim.lr_scheduler.StepLR(
         optimizer_continuo,
         step_size=config.lr_step_size,
@@ -70,7 +68,7 @@ def main(config):
 
         for phase in ['train', 'test']:
             model_continuo.train() if phase == 'train' else model_continuo.eval()
-            model_middleparts.train() if phase == 'train' else model_middleparts.eval()
+            model_middle_parts.train() if phase == 'train' else model_middle_parts.eval()
             loss_lists = {
                 'all': [],
                 'bass': [],
@@ -84,14 +82,14 @@ def main(config):
                     inputs, targets = batch
                     # Transfer to device
                     inputs_for_continuo = {k: inputs[k].to(device) for k in ['soprano', 'bass', 'extra']}
-                    inputs_for_middleparts = {k: inputs[k].to(device) for k in ['soprano', 'alto', 'tenor', 'bass_withcontext', 'extra']}
+                    inputs_for_middle_parts = {k: inputs[k].to(device) for k in ['soprano', 'alto', 'tenor', 'bass_with_context', 'extra']}
                     targets_continuo = {k: targets[k].to(device) for k in ['bass']}
                     targets_middleparts = {k: targets[k].to(device) for k in ['alto', 'tenor']}
 
                     predictions_continuo = model_continuo(inputs_for_continuo)
                     losses_continuo = {k: criterion(predictions_continuo[k], targets_continuo[k]) for k in targets_continuo.keys()}
 
-                    predictions_middleparts = model_middleparts(inputs_for_middleparts)
+                    predictions_middleparts = model_middle_parts(inputs_for_middle_parts)
                     losses_middleparts = {k: criterion(predictions_middleparts[k], targets_middleparts[k]) for k in targets_middleparts.keys()}
 
                     loss = sum([sum(losses_middleparts.values()), sum(losses_continuo.values())])
@@ -105,7 +103,9 @@ def main(config):
                     if phase == 'train':
                         optimizer_continuo.zero_grad()
                         optimizer_middleparts.zero_grad()
-                        loss.backward()
+                        sum(losses_continuo.values()).backward()
+                        sum(losses_middleparts.values()).backward()
+                        # loss.backward()
                         optimizer_continuo.step()
                         optimizer_middleparts.step()
 
@@ -130,7 +130,7 @@ def main(config):
             torch.save({
                 'config': config,
                 'state_continuo': model_continuo.state_dict(),
-                'state_middleparts': model_middleparts.state_dict(),
+                'state_middle_parts': model_middle_parts.state_dict(),
                 'epoch': epoch,
                 'loss_bass': mean(loss_lists['bass']),
                 'loss_alto': mean(loss_lists['alto']),
@@ -142,21 +142,21 @@ def main(config):
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.ERROR)
 
     configs = []
-    for hidden_size in [30]:
+    for hidden_size in [600]:
         config = utils.Config({
-            'num_epochs': 200,
+            'num_epochs': 1000,
             'batch_size': 8192,
             'num_workers': 4,
             'hidden_size': hidden_size,
             'context_radius': 32,
             'time_grid': 0.25,
-            'lr': 0.001,
+            'lr': 0.0004,
             'lr_gamma': 0.95,
-            'lr_step_size': 10,
-            'checkpoint_interval': 1,
+            'lr_step_size': 2,
+            'checkpoint_interval': 10,
             'split': 0.05,
         })
         configs.append(config)

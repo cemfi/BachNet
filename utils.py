@@ -14,9 +14,10 @@ from music21.meter import TimeSignature
 from music21.note import Rest, Note
 from music21.pitch import Pitch
 from music21.stream import Score, Part, Measure
+from music21.tempo import MetronomeMark
 from music21.tie import Tie
 
-from data import indices_extra, indices_parts, pitch_size
+from data import indices_extra, indices_parts, offsets_parts
 
 
 class Config(object):
@@ -33,7 +34,6 @@ class Config(object):
     checkpoint_root_dir = os.path.join('.', 'checkpoints')
     checkpoint_interval = None
     log_interval = 1
-    transpositions = [-6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5]
     split = 0.1
     seed = 1234
 
@@ -71,7 +71,7 @@ def generate_txt_output(data, path):
             fp.write('\n')
 
 
-def tensors_to_stream(outputs, config, metadata=None):
+def tensors_to_stream(outputs, config, transposition=0, metadata=None):
     cur_measure_number = 0
     parts = {}
     for part_name in outputs.keys():
@@ -80,14 +80,16 @@ def tensors_to_stream(outputs, config, metadata=None):
         part = Part(id=part_name)
         parts[part_name] = part
 
-    last_time_numerator = None
-    last_time_denominator = None
-    last_num_sharps = None
+    last_time_signature = None
+    cur_time_signature = '4/4'
     for step in range(outputs['soprano'].shape[0]):
         extra = outputs['extra'][step]
-        cur_time_numerator = int(extra[indices_extra['time_numerator']].item())
-        cur_time_denominator = int(extra[indices_extra['time_denominator']].item())
-        cur_num_sharps = int(extra[indices_extra['num_sharps']].item())
+        if extra[indices_extra['has_time_signature_3/4']].item() == 1:
+            cur_time_signature = '3/4'
+        elif extra[indices_extra['has_time_signature_4/4']].item() == 1:
+            cur_time_signature = '4/4'
+        elif extra[indices_extra['has_time_signature_3/2']].item() == 1:
+            cur_time_signature = '3/2'
         cur_time_pos = extra[indices_extra['time_pos']].item()
         has_fermata = extra[indices_extra['has_fermata']].item() == 1
 
@@ -99,18 +101,13 @@ def tensors_to_stream(outputs, config, metadata=None):
                         part[-1].append(clef.TrebleClef())
                     else:
                         part[-1].append(clef.BassClef())
+                    part[-1].append(KeySignature(0))
             cur_measure_number += 1
 
-        if last_time_numerator is None or last_time_denominator is None or cur_time_numerator != last_time_numerator or cur_time_denominator != last_time_denominator:
+        if last_time_signature is None or cur_time_signature != last_time_signature:
             for part in parts.values():
-                part[-1].append(TimeSignature(f'{cur_time_numerator}/{cur_time_denominator}'))
-            last_time_numerator = cur_time_numerator
-            last_time_denominator = cur_time_denominator
-
-        if last_num_sharps is None or cur_num_sharps != last_num_sharps:
-            for part in parts.values():
-                part[-1].append(KeySignature(cur_num_sharps))
-            last_num_sharps = cur_num_sharps
+                part[-1].append(TimeSignature(cur_time_signature))
+            last_time_signature = cur_time_signature
 
         for part_name, part in parts.items():
             idx = torch.argmax(outputs[part_name][step]).item()
@@ -133,7 +130,7 @@ def tensors_to_stream(outputs, config, metadata=None):
                 pitch = Pitch()
                 part[-1].append(Note(pitch, quarterLength=config.time_grid))
                 # Set pitch value AFTER appending to measure in order to avoid unnecessary accidentals
-                pitch.midi = idx + (pitch_size // 2) - len(indices_parts)
+                pitch.midi = idx + offsets_parts[part_name] - len(indices_parts)
 
         if has_fermata:
             for part in parts.values():
@@ -156,5 +153,8 @@ def tensors_to_stream(outputs, config, metadata=None):
     score.append(parts['bass'])
 
     score.stripTies(inPlace=True, retainContainers=True)
+
+    if transposition != 0:
+        score.transpose(transposition, inPlace=True)
 
     return score
