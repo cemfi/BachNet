@@ -241,12 +241,12 @@ if __name__ == '__main__':
     from glob import glob
 
     checkpoint_path = sorted(glob('./checkpoints/*.pt'))[-1]
-    # checkpoint_path = './checkpoints/2019-06-12_19-41-17 batch_size=8192 hidden_size=600 context_radius=32 time_grid=0.25 lr=0.0004 lr_gamma=0.95 lr_step_size=2 split=0.05 0060.pt'
+    # checkpoint_path = './checkpoints/2019-06-12_21-21-20 batch_size=8192 hidden_size=400 context_radius=32 time_grid=0.25 lr=0.0003 lr_gamma=0.95 lr_step_size=10 split=0.05 0050.pt'
     print(os.path.split(checkpoint_path)[-1])
 
     numbers = list(glob('./data/time_grid=0.25 split=0.05/test/*.pt'))
     numbers = [n[-6:-3] for n in numbers]
-    i = 5
+    i = 9
     numbers = numbers[i:i + 1]
 
     for n in tqdm(numbers):
@@ -263,7 +263,7 @@ if __name__ == '__main__':
             soprano_path=soprano_path,
             # checkpoint_path='./checkpoints/2019-06-09_19-31-32 batch_size=8192 hidden_size=800 context_radius=32 time_grid=0.25 lr=0.001 lr_gamma=0.98 lr_step_size=10 split=0.05 0020.pt',
             checkpoint_path=checkpoint_path,
-            num_candidates=1
+            num_candidates=3
         )
 
         # score.write('musicxml', f'output_{n}.musicxml')

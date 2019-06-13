@@ -6,6 +6,7 @@ from glob import glob
 
 import torch
 from music21 import converter
+from music21.analysis.discrete import Ambitus
 from music21.corpus import chorales
 from music21.expressions import Fermata
 from music21.key import KeySignature, Key
@@ -51,6 +52,20 @@ offset_to_sharps = {
     5: -1
 }
 
+min_pitches = {
+    'bass': 36,
+    'tenor': 48,
+    'alto': 53,
+    'soprano': 57
+}
+
+max_pitches = {
+    'bass': 64,
+    'tenor': 69,
+    'alto': 74,
+    'soprano': 81
+}
+
 offsets_parts = {
     'soprano': 55,
     'alto': 49,
@@ -59,11 +74,13 @@ offsets_parts = {
 }
 
 pitch_sizes_parts = {
-    'soprano': 30,
-    'alto': 31,
-    'tenor': 30,
-    'bass': 37
+    'bass': 29,
+    'tenor': 22,
+    'alto': 22,
+    'soprano': 25
 }
+
+ambitus = Ambitus()
 
 
 class ChoralesDataset(Dataset):
@@ -215,8 +232,19 @@ def _generate_data_training(time_grid, root_dir, overwrite, split):
         except KeyError:
             continue
 
-        # Save soprano in own file
+        # Save soprano in own file for inference
         chorale['Soprano'].write('musicxml', os.path.join(musicxml_dir, f'{str(chorale.metadata.number).zfill(3)}_soprano.musicxml'))
+
+        # Get minimum and maximum transpositions
+        transpositions_down = -float('inf')
+        transpositions_up = float('inf')
+        for part_name, part in streams.items():
+            min_pitch, max_pitch = ambitus.getPitchSpan(part)
+            transpositions_down = max(transpositions_down, min_pitches[part_name] - min_pitch.midi)
+            transpositions_up = min(transpositions_up, max_pitches[part_name] - max_pitch.midi)
+
+        
+
 
         # Transpose chorale to C/Am
         keys = list(chorale.flat.getElementsByClass(Key))
