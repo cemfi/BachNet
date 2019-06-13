@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 import math
 import os
 import random
@@ -25,7 +27,8 @@ indices_extra = {
     'has_time_signature_3/4': 1,
     'has_time_signature_4/4': 2,
     'has_time_signature_3/2': 3,
-    'time_pos': 4
+    'time_pos': 4,
+    'pitch_offset': 5
 }
 
 sharps_to_offset = {
@@ -66,19 +69,9 @@ max_pitches = {
     'soprano': 81
 }
 
-offsets_parts = {
-    'soprano': 55,
-    'alto': 49,
-    'tenor': 45,
-    'bass': 31
-}
-
-pitch_sizes_parts = {
-    'bass': 29,
-    'tenor': 22,
-    'alto': 22,
-    'soprano': 25
-}
+pitch_sizes_parts = {}
+for part_name in min_pitches.keys():
+    pitch_sizes_parts[part_name] = max_pitches[part_name] - min_pitches[part_name] + 1
 
 ambitus = Ambitus()
 
@@ -152,7 +145,7 @@ def generate_data_inference(time_grid, soprano_path):
             if element.duration.quarterLength == 0:
                 continue
 
-            pitch = element.pitch.midi - offsets_parts['soprano'] + len(indices_parts)
+            pitch = element.pitch.midi - min_pitches['soprano'] + len(indices_parts)
             duration = int(element.duration.quarterLength / time_grid)
 
             # Store pitch and ties
@@ -216,6 +209,8 @@ def _generate_data_training(time_grid, root_dir, overwrite, split):
     os.makedirs(test_dir, exist_ok=True)
     os.makedirs(musicxml_dir, exist_ok=True)
 
+    chorale_numbers = []
+
     for chorale in tqdm(chorales.Iterator(returnType='stream'), unit='chorales', desc='Generating dataset'):
         # Skip chorales with more or less than 4 parts
         if len(chorale.parts) != 4:
@@ -234,6 +229,7 @@ def _generate_data_training(time_grid, root_dir, overwrite, split):
 
         # Save soprano in own file for inference
         chorale['Soprano'].write('musicxml', os.path.join(musicxml_dir, f'{str(chorale.metadata.number).zfill(3)}_soprano.musicxml'))
+        chorale.write('musicxml', os.path.join(musicxml_dir, f'{str(chorale.metadata.number).zfill(3)}_full.musicxml'))
 
         # Get minimum and maximum transpositions
         transpositions_down = -float('inf')
@@ -243,90 +239,94 @@ def _generate_data_training(time_grid, root_dir, overwrite, split):
             transpositions_down = max(transpositions_down, min_pitches[part_name] - min_pitch.midi)
             transpositions_up = min(transpositions_up, max_pitches[part_name] - max_pitch.midi)
 
-        
-
-
-        # Transpose chorale to C/Am
-        keys = list(chorale.flat.getElementsByClass(Key))
-        if len(keys) > 0:
-            transposition = sharps_to_offset[keys[0].sharps]
-            chorale.transpose(-transposition, inPlace=True)
-
         length = math.ceil(streams['soprano'].highestTime / time_grid)
-        data = {
-            'extra': torch.zeros((length, len(indices_extra)))
-        }
-        for part_name, part in streams.items():
-            part = part.flat
-            # Init empty tensor for current voice
-            data[part_name] = torch.zeros((length, pitch_sizes_parts[part_name] + len(indices_parts)))
+        for t in range(transpositions_down, transpositions_up + 1):
+            data = {'extra': torch.zeros((length, len(indices_extra)))}
+            # Note transposition offset
+            data['extra'][:, indices_extra['pitch_offset']] = t
+            for part_name, part in streams.items():
+                part = deepcopy(part)
+                part = part.flat.transpose(t)
+                # Init empty tensor for current voice
+                data[part_name] = torch.zeros((length, pitch_sizes_parts[part_name] + len(indices_parts)))
 
-            # Iterate through all musical elements in current voice stream
-            for element in part:
-                offset = int(element.offset / time_grid)
+                # Iterate through all musical elements in current voice stream
+                for element in part:
+                    offset = int(element.offset / time_grid)
 
-                if type(element) == Note:
-                    # Skip grace notes
-                    if element.duration.quarterLength == 0:
-                        continue
+                    if type(element) == Note:
+                        # Skip grace notes
+                        if element.duration.quarterLength == 0:
+                            continue
 
-                    pitch = element.pitch.midi - offsets_parts[part_name] + len(indices_parts)
-                    duration = int(element.duration.quarterLength / time_grid)
+                        pitch = element.pitch.midi - min_pitches[part_name] + len(indices_parts)
+                        duration = int(element.duration.quarterLength / time_grid)
 
-                    # Store pitch and ties
-                    data[part_name][offset, pitch] = 1
-                    data[part_name][offset + 1:offset + duration, indices_parts['is_continued']] = 1
+                        # Store pitch and ties
+                        data[part_name][offset, pitch] = 1
+                        data[part_name][offset + 1:offset + duration, indices_parts['is_continued']] = 1
 
-                    # Fermata (only used in soprano)
-                    if part_name == 'soprano' and any([type(e) == Fermata for e in element.expressions]):
-                        data['extra'][offset, indices_extra['has_fermata']] = 1
+                        # Fermata (only used in soprano)
+                        if part_name == 'soprano' and any([type(e) == Fermata for e in element.expressions]):
+                            data['extra'][offset, indices_extra['has_fermata']] = 1
 
-                if type(element) == Rest:
-                    duration = int(element.duration.quarterLength / time_grid)
-                    data[part_name][offset, indices_parts['is_rest']] = 1
-                    data[part_name][offset + 1:offset + duration, indices_parts['is_continued']] = 1
+                    if type(element) == Rest:
+                        duration = int(element.duration.quarterLength / time_grid)
+                        data[part_name][offset, indices_parts['is_rest']] = 1
+                        data[part_name][offset + 1:offset + duration, indices_parts['is_continued']] = 1
 
-                if part_name == 'soprano':
-                    if type(element) == TimeSignature:
-                        if element.ratioString == '3/4':
-                            data['extra'][offset:, indices_extra['has_time_signature_3/4']] = 1
-                            data['extra'][offset:, indices_extra['has_time_signature_4/4']] = 0
-                            data['extra'][offset:, indices_extra['has_time_signature_3/2']] = 0
-                        elif element.ratioString == '4/4':
-                            data['extra'][offset:, indices_extra['has_time_signature_3/4']] = 0
-                            data['extra'][offset:, indices_extra['has_time_signature_4/4']] = 1
-                            data['extra'][offset:, indices_extra['has_time_signature_3/2']] = 0
-                        elif element.ratioString == '3/2':
-                            data['extra'][offset:, indices_extra['has_time_signature_3/4']] = 0
-                            data['extra'][offset:, indices_extra['has_time_signature_4/4']] = 0
-                            data['extra'][offset:, indices_extra['has_time_signature_3/2']] = 1
+                    if part_name == 'soprano':
+                        if type(element) == TimeSignature:
+                            if element.ratioString == '3/4':
+                                data['extra'][offset:, indices_extra['has_time_signature_3/4']] = 1
+                                data['extra'][offset:, indices_extra['has_time_signature_4/4']] = 0
+                                data['extra'][offset:, indices_extra['has_time_signature_3/2']] = 0
+                            elif element.ratioString == '4/4':
+                                data['extra'][offset:, indices_extra['has_time_signature_3/4']] = 0
+                                data['extra'][offset:, indices_extra['has_time_signature_4/4']] = 1
+                                data['extra'][offset:, indices_extra['has_time_signature_3/2']] = 0
+                            elif element.ratioString == '3/2':
+                                data['extra'][offset:, indices_extra['has_time_signature_3/4']] = 0
+                                data['extra'][offset:, indices_extra['has_time_signature_4/4']] = 0
+                                data['extra'][offset:, indices_extra['has_time_signature_3/2']] = 1
 
-        measure_offsets = [o / time_grid for o in streams['soprano'].measureOffsetMap().keys()]
-        cur_offset = streams['soprano'].flat.notesAndRests[0].beat
-        data['extra'][0, indices_extra['time_pos']] = cur_offset
-        for offset in range(1, length):
-            if offset in measure_offsets:
-                cur_offset = 1
-            else:
-                cur_offset += time_grid
-            data['extra'][offset, indices_extra['time_pos']] = cur_offset
+            measure_offsets = [o / time_grid for o in streams['soprano'].measureOffsetMap().keys()]
+            cur_offset = streams['soprano'].flat.notesAndRests[0].beat
+            data['extra'][0, indices_extra['time_pos']] = cur_offset
+            for offset in range(1, length):
+                if offset in measure_offsets:
+                    cur_offset = 1
+                else:
+                    cur_offset += time_grid
+                data['extra'][offset, indices_extra['time_pos']] = cur_offset
 
-        target_file_path = os.path.join(target_dir, f'{str(chorale.metadata.number).zfill(3)}.pt')
-        torch.save({
-            'data': data,
-            'title': chorale.metadata.title
-        }, target_file_path)
+            signum = '+' if t >= 0 else '-'
 
-        chorale.write('musicxml', os.path.join(musicxml_dir, f'{str(chorale.metadata.number).zfill(3)}_full.musicxml'))
+            target_file_path = os.path.join(target_dir, f'{str(chorale.metadata.number).zfill(3)}{signum}{int(math.fabs(t))}.pt')
+            torch.save({
+                'data': data,
+                'title': chorale.metadata.title
+            }, target_file_path)
+
+        chorale_numbers.append(str(chorale.metadata.number).zfill(3))
 
     # Move files to train / test directories
-    file_paths = glob(os.path.join(target_dir, '*.pt'))
-    random.shuffle(file_paths)  # Shuffle in place
-    split_idx = int(len(file_paths) * split)
-    for file_path in file_paths[split_idx:]:
-        shutil.move(file_path, train_dir)
-    for file_path in file_paths[:split_idx]:
-        shutil.move(file_path, test_dir)
+    random.shuffle(chorale_numbers)  # Shuffle in place
+    split_idx = int(len(chorale_numbers) * split)
+
+    for cn in chorale_numbers[split_idx:]:  # Train
+        file_paths = glob(os.path.join(target_dir, f'*{cn}*.pt'))
+        for file_path in file_paths:
+            shutil.move(file_path, train_dir)
+
+    for cn in chorale_numbers[:split_idx]:  # Test
+        file_paths = glob(os.path.join(target_dir, f'*{cn}+0.pt'))
+        for file_path in file_paths:
+            shutil.move(file_path, test_dir)
+
+    remove_paths = glob(os.path.join(target_dir, '*.pt'))
+    for remove_path in remove_paths:
+        os.remove(remove_path)
 
     return target_dir
 
@@ -368,7 +368,7 @@ def _make_data_loaders(root_dir, batch_size, num_workers, context_radius):
     }
 
 
-def get_data_loaders(time_grid=0.25, root_dir=None, overwrite=False, split=0.15, batch_size=1, num_workers=1, context_radius=32):
+def get_data_loaders(time_grid=0.25, root_dir=None, overwrite=False, split=0.05, batch_size=1, num_workers=1, context_radius=32):
     if root_dir is None:
         root_dir = os.path.join('.', 'data')
 
