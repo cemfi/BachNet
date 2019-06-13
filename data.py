@@ -212,7 +212,7 @@ def _generate_data_training(time_grid, root_dir, overwrite, split):
             # Note transposition offset
             data['extra'][:, indices_extra['pitch_offset']] = t
             for part_name, part in streams.items():
-                part = deepcopy(part)
+                # part = deepcopy(part)
                 part = part.flat.transpose(t)
                 # Init empty tensor for current voice
                 data[part_name] = torch.zeros((length, pitch_sizes_parts[part_name] + len(indices_parts)))

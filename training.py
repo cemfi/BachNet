@@ -145,15 +145,15 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.ERROR)
 
     configs = []
-    for hidden_size in [50]:
+    for hidden_size in [600]:
         config = utils.Config({
-            'num_epochs': 1000,
+            'num_epochs': 200,
             'batch_size': 8192,
             'num_workers': 4,
             'hidden_size': hidden_size,
             'context_radius': 32,
             'time_grid': 0.25,
-            'lr': 0.0004,
+            'lr': 0.0001,
             'lr_gamma': 0.95,
             'lr_step_size': 10,
             'checkpoint_interval': 10,

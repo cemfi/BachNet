@@ -41,7 +41,6 @@ def predict_middle_parts(bass, soprano_path, checkpoint_path, num_candidates=1):
 
     inputs = sample['data']
     metadata = sample['metadata']
-    transposition = sample['transposition']
 
     soprano = inputs['soprano'].clone()
     extra = inputs['extra'].clone()
@@ -121,7 +120,7 @@ def predict_middle_parts(bass, soprano_path, checkpoint_path, num_candidates=1):
         'bass': bass_for_playback,
         'alto': one_hot(winner[0], pitch_sizes_parts['alto'] + len(indices_parts)),
         'tenor': one_hot(winner[1], pitch_sizes_parts['tenor'] + len(indices_parts)),
-    }, config, transposition, metadata)
+    }, config, metadata)
 
     # for e in zip(winner.t(), probabilities):
     #     print(e)
@@ -155,7 +154,6 @@ def predict_bass(soprano_path, checkpoint_path, num_candidates=1):
 
     inputs = sample['data']
     metadata = sample['metadata']
-    transposition = sample['transposition']
 
     soprano = inputs['soprano'].clone()
     extra = inputs['extra'].clone()
@@ -245,8 +243,8 @@ if __name__ == '__main__':
     print(os.path.split(checkpoint_path)[-1])
 
     numbers = list(glob('./data/time_grid=0.25 split=0.05/test/*.pt'))
-    numbers = [n[-6:-3] for n in numbers]
-    i = 9
+    numbers = [n[-8:-5] for n in numbers]
+    i = 5
     numbers = numbers[i:i + 1]
 
     for n in tqdm(numbers):
