@@ -14,10 +14,9 @@ from music21.meter import TimeSignature
 from music21.note import Rest, Note
 from music21.pitch import Pitch
 from music21.stream import Score, Part, Measure
-from music21.tempo import MetronomeMark
 from music21.tie import Tie
 
-from data import indices_extra, indices_parts, offsets_parts
+from data import indices_extra, indices_parts, min_pitches
 
 
 class Config(object):
@@ -34,7 +33,7 @@ class Config(object):
     checkpoint_root_dir = os.path.join('.', 'checkpoints')
     checkpoint_interval = None
     log_interval = 1
-    split = 0.1
+    split = 0.05
     seed = 1234
 
     def __init__(self, config=None):
@@ -71,7 +70,7 @@ def generate_txt_output(data, path):
             fp.write('\n')
 
 
-def tensors_to_stream(outputs, config, transposition=0, metadata=None):
+def tensors_to_stream(outputs, config, metadata=None):
     cur_measure_number = 0
     parts = {}
     for part_name in outputs.keys():
@@ -130,7 +129,7 @@ def tensors_to_stream(outputs, config, transposition=0, metadata=None):
                 pitch = Pitch()
                 part[-1].append(Note(pitch, quarterLength=config.time_grid))
                 # Set pitch value AFTER appending to measure in order to avoid unnecessary accidentals
-                pitch.midi = idx + offsets_parts[part_name] - len(indices_parts)
+                pitch.midi = idx + min_pitches[part_name] - len(indices_parts)
 
         if has_fermata:
             for part in parts.values():
@@ -153,8 +152,5 @@ def tensors_to_stream(outputs, config, transposition=0, metadata=None):
     score.append(parts['bass'])
 
     score.stripTies(inPlace=True, retainContainers=True)
-
-    if transposition != 0:
-        score.transpose(transposition, inPlace=True)
 
     return score

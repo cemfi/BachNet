@@ -11,7 +11,7 @@ from music21 import converter
 from music21.analysis.discrete import Ambitus
 from music21.corpus import chorales
 from music21.expressions import Fermata
-from music21.key import KeySignature, Key
+# from music21.key import KeySignature, Key
 from music21.meter import TimeSignature
 from music21.note import Note, Rest
 from torch.utils.data import Dataset, RandomSampler, BatchSampler, SequentialSampler, DataLoader
@@ -29,30 +29,6 @@ indices_extra = {
     'has_time_signature_3/2': 3,
     'time_pos': 4,
     'pitch_offset': 5
-}
-
-sharps_to_offset = {
-    -4: -4,
-    -3: 3,
-    -2: -2,
-    -1: 5,
-    0: 0,
-    1: -5,
-    2: 2,
-    3: -3,
-    4: 4
-}
-
-offset_to_sharps = {
-    -5: 1,
-    -4: -4,
-    -3: 3,
-    -2: -2,
-    0: 0,
-    2: 2,
-    3: -3,
-    4: 4,
-    5: -1
 }
 
 min_pitches = {
@@ -128,14 +104,6 @@ def generate_data_inference(time_grid, soprano_path):
         'soprano': torch.zeros((length, pitch_sizes_parts['soprano'] + len(indices_parts)))
     }
 
-    # Transpose chorale to C/Am
-    keys = list(stream.flat.getElementsByClass(Key))
-    if len(keys) > 0:
-        transposition = sharps_to_offset[keys[0].sharps]
-        stream.transpose(-transposition, inPlace=True)
-    else:
-        transposition = 0
-
     # Iterate through all musical elements in current voice stream
     for element in stream.flat:
         offset = int(element.offset / time_grid)
@@ -188,7 +156,6 @@ def generate_data_inference(time_grid, soprano_path):
     return {
         'data': data,
         'metadata': stream.metadata,
-        'transposition': transposition
     }
 
 
