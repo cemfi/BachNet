@@ -12,6 +12,7 @@ from music21.analysis.discrete import Ambitus
 from music21.corpus import chorales
 from music21.expressions import Fermata
 # from music21.key import KeySignature, Key
+from music21.key import Key
 from music21.meter import TimeSignature
 from music21.note import Note, Rest
 from torch.utils.data import Dataset, RandomSampler, BatchSampler, SequentialSampler, DataLoader
@@ -28,7 +29,19 @@ indices_extra = {
     'has_time_signature_4/4': 2,
     'has_time_signature_3/2': 3,
     'time_pos': 4,
-    'pitch_offset': 5
+    'pitch_offset': 5,
+    'has_sharps_0': 6,
+    'has_sharps_1': 7,
+    'has_sharps_2': 8,
+    'has_sharps_3': 9,
+    'has_sharps_4': 10,
+    'has_sharps_5': 11,
+    'has_sharps_6': 12,
+    'has_sharps_7': 13,
+    'has_sharps_8': 14,
+    'has_sharps_9': 15,
+    'has_sharps_10': 16,
+    'has_sharps_11': 17
 }
 
 min_pitches = {
@@ -194,6 +207,11 @@ def _generate_data_training(time_grid, root_dir, overwrite, split):
         except KeyError:
             continue
 
+        keys = list(chorale.flat.getElementsByClass(Key))
+        if len(keys) > 0:
+            num_sharps = keys[0].sharps
+
+
         # Save soprano in own file for inference
         chorale['Soprano'].write('musicxml', os.path.join(musicxml_dir, f'{str(chorale.metadata.number).zfill(3)}_soprano.musicxml'))
         chorale.write('musicxml', os.path.join(musicxml_dir, f'{str(chorale.metadata.number).zfill(3)}_full.musicxml'))
@@ -211,6 +229,9 @@ def _generate_data_training(time_grid, root_dir, overwrite, split):
             data = {'extra': torch.zeros((length, len(indices_extra)))}
             # Note transposition offset
             data['extra'][:, indices_extra['pitch_offset']] = t
+            cur_sharps = (t * 7) % 12
+            data['extra'][:, indices_extra[cur_sharps + indices_extra['has_sharps_0']]] = 1
+
             for part_name, part in streams.items():
                 # part = deepcopy(part)
                 part = part.flat.transpose(t)
