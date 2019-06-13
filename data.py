@@ -44,18 +44,20 @@ indices_extra = {
     'has_sharps_11': 17
 }
 
+trans = 6
+
 min_pitches = {
-    'bass': 36,
-    'tenor': 48,
-    'alto': 53,
-    'soprano': 57
+    'bass': 36 - trans,
+    'tenor': 48 - trans,
+    'alto': 53 - trans,
+    'soprano': 57 - trans
 }
 
 max_pitches = {
-    'bass': 64,
-    'tenor': 69,
-    'alto': 74,
-    'soprano': 81
+    'bass': 64 + trans,
+    'tenor': 69 + trans,
+    'alto': 74 + trans,
+    'soprano': 81 + trans
 }
 
 pitch_sizes_parts = {}
@@ -116,6 +118,14 @@ def generate_data_inference(time_grid, soprano_path):
         'extra': torch.zeros((length, len(indices_extra))),
         'soprano': torch.zeros((length, pitch_sizes_parts['soprano'] + len(indices_parts)))
     }
+    keys = list(stream.flat.getElementsByClass(Key))
+    if len(keys) > 0:
+        num_sharps = keys[0].sharps
+        num_sharps = (num_sharps + 12) % 12
+    else:
+        num_sharps = 0
+
+    data['extra'][:, num_sharps + indices_extra['has_sharps_0']] = 1
 
     # Iterate through all musical elements in current voice stream
     for element in stream.flat:
@@ -210,30 +220,33 @@ def _generate_data_training(time_grid, root_dir, overwrite, split):
         keys = list(chorale.flat.getElementsByClass(Key))
         if len(keys) > 0:
             num_sharps = keys[0].sharps
-
+            num_sharps = (num_sharps + 12) % 12
+        else:
+            num_sharps = 0
 
         # Save soprano in own file for inference
         chorale['Soprano'].write('musicxml', os.path.join(musicxml_dir, f'{str(chorale.metadata.number).zfill(3)}_soprano.musicxml'))
         chorale.write('musicxml', os.path.join(musicxml_dir, f'{str(chorale.metadata.number).zfill(3)}_full.musicxml'))
 
-        # Get minimum and maximum transpositions
-        transpositions_down = -float('inf')
-        transpositions_up = float('inf')
-        for part_name, part in streams.items():
-            min_pitch, max_pitch = ambitus.getPitchSpan(part)
-            transpositions_down = max(transpositions_down, min_pitches[part_name] - min_pitch.midi)
-            transpositions_up = min(transpositions_up, max_pitches[part_name] - max_pitch.midi)
+        # # Get minimum and maximum transpositions
+        # transpositions_down = -float('inf')
+        # transpositions_up = float('inf')
+        # for part_name, part in streams.items():
+        #     min_pitch, max_pitch = ambitus.getPitchSpan(part)
+        #     transpositions_down = max(transpositions_down, min_pitches[part_name] - min_pitch.midi)
+        #     transpositions_up = min(transpositions_up, max_pitches[part_name] - max_pitch.midi)
+        transpositions_down = -trans
+        transpositions_up = trans
 
         length = math.ceil(streams['soprano'].highestTime / time_grid)
         for t in range(transpositions_down, transpositions_up + 1):
             data = {'extra': torch.zeros((length, len(indices_extra)))}
             # Note transposition offset
             data['extra'][:, indices_extra['pitch_offset']] = t
-            cur_sharps = (t * 7) % 12
-            data['extra'][:, indices_extra[cur_sharps + indices_extra['has_sharps_0']]] = 1
+            cur_sharps = (num_sharps + (t * 7)) % 12
+            data['extra'][:, cur_sharps + indices_extra['has_sharps_0']] = 1
 
             for part_name, part in streams.items():
-                # part = deepcopy(part)
                 part = part.flat.transpose(t)
                 # Init empty tensor for current voice
                 data[part_name] = torch.zeros((length, pitch_sizes_parts[part_name] + len(indices_parts)))

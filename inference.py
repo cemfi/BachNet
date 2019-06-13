@@ -244,7 +244,7 @@ if __name__ == '__main__':
 
     numbers = list(glob('./data/time_grid=0.25 split=0.05/test/*.pt'))
     numbers = [n[-8:-5] for n in numbers]
-    i = 5
+    i = 4
     numbers = numbers[i:i + 1]
 
     for n in tqdm(numbers):

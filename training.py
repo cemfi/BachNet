@@ -34,6 +34,7 @@ def main(config):
         time_grid=config.time_grid,
         context_radius=config.context_radius,
         split=config.split,
+        root_dir='./data-12'
     )
 
     logging.debug('Creating model...')
@@ -145,9 +146,9 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.ERROR)
 
     configs = []
-    for hidden_size in [600]:
+    for hidden_size in [300, 400, 500, 600, 700, 800, 900, 1000]:
         config = utils.Config({
-            'num_epochs': 200,
+            'num_epochs': 20,
             'batch_size': 8192,
             'num_workers': 4,
             'hidden_size': hidden_size,
@@ -158,6 +159,7 @@ if __name__ == '__main__':
             'lr_step_size': 10,
             'checkpoint_interval': 10,
             'split': 0.05,
+
         })
         configs.append(config)
 

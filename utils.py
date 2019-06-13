@@ -100,7 +100,12 @@ def tensors_to_stream(outputs, config, metadata=None):
                         part[-1].append(clef.TrebleClef())
                     else:
                         part[-1].append(clef.BassClef())
-                    part[-1].append(KeySignature(0))
+                    key = int(torch.argmax(outputs['extra'][0, indices_extra['has_sharps_0']:indices_extra['has_sharps_11'] + 1], dim=0).item())
+                    print(outputs['extra'][0, indices_extra['has_sharps_0']:indices_extra['has_sharps_11'] + 1])
+                    print(key)
+                    if key >= 6:
+                        key -= 12
+                    part[-1].append(KeySignature(key))
             cur_measure_number += 1
 
         if last_time_signature is None or cur_time_signature != last_time_signature:
