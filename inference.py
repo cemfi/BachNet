@@ -238,13 +238,13 @@ if __name__ == '__main__':
     import os
     from glob import glob
 
-    checkpoint_path = sorted(glob('./checkpoints/*.pt'))[-1]
+    checkpoint_path = sorted(glob('./checkpoints/*/*.pt'))[-1]
     # checkpoint_path = './checkpoints/2019-06-12_21-21-20 batch_size=8192 hidden_size=400 context_radius=32 time_grid=0.25 lr=0.0003 lr_gamma=0.95 lr_step_size=10 split=0.05 0050.pt'
     print(os.path.split(checkpoint_path)[-1])
 
     numbers = list(glob('./data/time_grid=0.25 split=0.05/test/*.pt'))
     numbers = [n[-8:-5] for n in numbers]
-    i = 4
+    i = 2
     numbers = numbers[i:i + 1]
 
     for n in tqdm(numbers):

@@ -44,7 +44,7 @@ indices_extra = {
     'has_sharps_11': 17
 }
 
-trans = 6
+trans = 0
 
 min_pitches = {
     'bass': 36 - trans,
@@ -229,14 +229,14 @@ def _generate_data_training(time_grid, root_dir, overwrite, split):
         chorale.write('musicxml', os.path.join(musicxml_dir, f'{str(chorale.metadata.number).zfill(3)}_full.musicxml'))
 
         # # Get minimum and maximum transpositions
-        # transpositions_down = -float('inf')
-        # transpositions_up = float('inf')
-        # for part_name, part in streams.items():
-        #     min_pitch, max_pitch = ambitus.getPitchSpan(part)
-        #     transpositions_down = max(transpositions_down, min_pitches[part_name] - min_pitch.midi)
-        #     transpositions_up = min(transpositions_up, max_pitches[part_name] - max_pitch.midi)
-        transpositions_down = -trans
-        transpositions_up = trans
+        transpositions_down = -float('inf')
+        transpositions_up = float('inf')
+        for part_name, part in streams.items():
+            min_pitch, max_pitch = ambitus.getPitchSpan(part)
+            transpositions_down = max(transpositions_down, min_pitches[part_name] - min_pitch.midi)
+            transpositions_up = min(transpositions_up, max_pitches[part_name] - max_pitch.midi)
+        # transpositions_down = -trans
+        # transpositions_up = trans
 
         length = math.ceil(streams['soprano'].highestTime / time_grid)
         for t in range(transpositions_down, transpositions_up + 1):

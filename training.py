@@ -34,7 +34,6 @@ def main(config):
         time_grid=config.time_grid,
         context_radius=config.context_radius,
         split=config.split,
-        root_dir='./data-12'
     )
 
     logging.debug('Creating model...')
@@ -126,8 +125,9 @@ def main(config):
         lr_scheduler_middleparts.step()
 
         if config.checkpoint_interval is not None and (epoch + 1) % config.checkpoint_interval == 0:
-            os.makedirs(config.checkpoint_root_dir, exist_ok=True)
-            checkpoint_path = os.path.join(config.checkpoint_root_dir, f'{date} {str(config)} {str(epoch + 1).zfill(4)}.pt')
+            subfolder = f'{date} {str(config)}'
+            os.makedirs(os.path.join(config.checkpoint_root_dir, subfolder), exist_ok=True)
+            checkpoint_path = os.path.join(config.checkpoint_root_dir, subfolder, f'{date} {str(config)} {str(epoch + 1).zfill(4)}.pt')
             torch.save({
                 'config': config,
                 'state_continuo': model_continuo.state_dict(),
@@ -146,16 +146,19 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.ERROR)
 
     configs = []
-    for hidden_size in [300, 400, 500, 600, 700, 800, 900, 1000]:
+    params = [
+        (32, 700)
+    ]
+    for radius, hidden_size in params:
         config = utils.Config({
-            'num_epochs': 20,
+            'num_epochs': 1000,
             'batch_size': 8192,
             'num_workers': 4,
             'hidden_size': hidden_size,
-            'context_radius': 32,
+            'context_radius': radius,
             'time_grid': 0.25,
-            'lr': 0.0001,
-            'lr_gamma': 0.95,
+            'lr': 0.001,
+            'lr_gamma': 0.98,
             'lr_step_size': 10,
             'checkpoint_interval': 10,
             'split': 0.05,
