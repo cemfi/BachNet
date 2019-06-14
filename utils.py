@@ -14,6 +14,7 @@ from music21.meter import TimeSignature
 from music21.note import Rest, Note
 from music21.pitch import Pitch
 from music21.stream import Score, Part, Measure
+from music21.tempo import MetronomeMark
 from music21.tie import Tie
 
 from data import indices_extra, indices_parts, min_pitches
@@ -104,6 +105,7 @@ def tensors_to_stream(outputs, config, metadata=None):
                     if key >= 6:
                         key -= 12
                     part[-1].append(KeySignature(key))
+                    part[-1].append(MetronomeMark(number=90))
             cur_measure_number += 1
 
         if last_time_signature is None or cur_time_signature != last_time_signature:
