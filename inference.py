@@ -210,6 +210,14 @@ def predict_bass(soprano_path, checkpoint_path, num_candidates=1):
         # Add log probabilities of candidates to current probabilities
         candidates[:, :, 0] = cur_probabilities.t() + candidates[:, :, 0]
 
+        # print('', flush=True)
+        # print(candidates[:, :, 0])
+        # print(candidates.view(-1, 4)[:, 0])
+        # candidate_indices = torch.argsort(candidates.view(-1, 4)[:, 0], dim=0, descending=True)
+        # print(candidate_indices)
+        # print(torch.stack([candidate_indices // num_candidates, candidate_indices % num_candidates], dim=1))
+        # exit()
+
         candidate_indices = torch.argsort(candidates.view(-1, 4)[:, 0], dim=0, descending=True)
         best_indices = torch.stack([candidate_indices // num_candidates, candidate_indices % num_candidates], dim=1)[:num_candidates]
         # [[last_chord_idx, new_chord_idx]]
@@ -238,31 +246,25 @@ if __name__ == '__main__':
     import os
     from glob import glob
 
-    checkpoint_path = sorted(glob('./checkpoints/*/*.pt'))[-1]
-    # checkpoint_path = './checkpoints/2019-06-12_21-21-20 batch_size=8192 hidden_size=400 context_radius=32 time_grid=0.25 lr=0.0003 lr_gamma=0.95 lr_step_size=10 split=0.05 0050.pt'
-    print(os.path.split(checkpoint_path)[-1])
+    # checkpoint_path = sorted(glob('./checkpoints/*.pt'))[-1]
+    checkpoint_path = './checkpoints/2019-06-17_17-10-47 batch_size=8192 hidden_size=650 context_radius=32 time_grid=0.25 lr=0.0005 lr_gamma=0.98 lr_step_size=20 split=0.05 1070.pt'
+    # print(os.path.split(checkpoint_path)[-1])
 
-    numbers = list(glob('./data/time_grid=0.25 split=0.05/test/*.pt'))
-    numbers = [n[-8:-5] for n in numbers]
-    i = 2
-    numbers = numbers[i:i + 1]
+    soprano_path = f'./data/musicxml/071_soprano.musicxml'
 
-    for n in tqdm(numbers):
-        soprano_path = f'./data/musicxml/{n}_soprano.musicxml'
+    bass = predict_bass(
+        soprano_path=soprano_path,
+        # checkpoint_path='./checkpoints/2019-06-09_19-31-32 batch_size=8192 hidden_size=800 context_radius=32 time_grid=0.25 lr=0.001 lr_gamma=0.98 lr_step_size=10 split=0.05 0020.pt',
+        checkpoint_path=checkpoint_path,
+        num_candidates=3
+    ).clone().detach().float()
+    score = predict_middle_parts(
+        bass,
+        soprano_path=soprano_path,
+        # checkpoint_path='./checkpoints/2019-06-09_19-31-32 batch_size=8192 hidden_size=800 context_radius=32 time_grid=0.25 lr=0.001 lr_gamma=0.98 lr_step_size=10 split=0.05 0020.pt',
+        checkpoint_path=checkpoint_path,
+        num_candidates=1
+    )
 
-        bass = predict_bass(
-            soprano_path=soprano_path,
-            # checkpoint_path='./checkpoints/2019-06-09_19-31-32 batch_size=8192 hidden_size=800 context_radius=32 time_grid=0.25 lr=0.001 lr_gamma=0.98 lr_step_size=10 split=0.05 0020.pt',
-            checkpoint_path=checkpoint_path,
-            num_candidates=1
-        ).clone().detach().float()
-        score = predict_middle_parts(
-            bass,
-            soprano_path=soprano_path,
-            # checkpoint_path='./checkpoints/2019-06-09_19-31-32 batch_size=8192 hidden_size=800 context_radius=32 time_grid=0.25 lr=0.001 lr_gamma=0.98 lr_step_size=10 split=0.05 0020.pt',
-            checkpoint_path=checkpoint_path,
-            num_candidates=3
-        )
-
-        # score.write('musicxml', f'output_{n}.musicxml')
-        score.show('musicxml')
+    # score.write('musicxml', f'output_{n}.musicxml')
+    score.show('musicxml')
