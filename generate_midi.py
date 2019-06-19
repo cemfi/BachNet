@@ -69,7 +69,7 @@ def predict_middle_parts(bass, soprano_path, checkpoint_path, num_candidates=1):
     acc_probabilities = predictions[:, 0]
     history_pitches = [predictions[:, 1:]]
 
-    for step in tqdm(range(1, length), unit='time steps'):
+    for step in range(1, length):
         candidates = []
         padding_size = max(0, config.context_radius - len(history_pitches))
         history_size = min(config.context_radius, len(history_pitches))
@@ -125,7 +125,7 @@ def predict_middle_parts(bass, soprano_path, checkpoint_path, num_candidates=1):
     # for e in zip(winner.t(), probabilities):
     #     print(e)
 
-    return score
+    return score, probabilities[-1]
 
     # score.write('musicxml', f'beam_{num_candidates}.musicxml')
     # score.show('musicxml')
@@ -169,7 +169,7 @@ def predict_bass(soprano_path, checkpoint_path, num_candidates=1):
     acc_probabilities = predictions[:, 0]
     history_pitches = [predictions[:, 1:]]
 
-    for step in tqdm(range(1, length), unit='time steps'):
+    for step in range(1, length):
         candidates = []
         history_size = min(config.context_radius, len(history_pitches))
         padding_size = config.context_radius - history_size
@@ -214,30 +214,52 @@ def predict_bass(soprano_path, checkpoint_path, num_candidates=1):
     #     print(e)
     bass_predicted = one_hot(winner[0], pitch_sizes_parts['bass'] + len(indices_parts))
 
-    return bass_predicted
+    return bass_predicted, probabilities[-1]
 
 
 if __name__ == '__main__':
-    torch.set_grad_enabled(False)
+    import os
+    from glob import glob
+    import re
 
-    checkpoint_path = './checkpoints/2019-06-17_17-10-47 batch_size=8192 hidden_size=650 context_radius=32 time_grid=0.25 lr=0.0005 lr_gamma=0.98 lr_step_size=20 split=0.05/2019-06-17_17-10-47 batch_size=8192 hidden_size=650 context_radius=32 time_grid=0.25 lr=0.0005 lr_gamma=0.98 lr_step_size=20 split=0.05 1070.pt'
+    checkpoint_paths = sorted(glob('./checkpoints/2019-06-17_17-10-47 batch_size=8192 hidden_size=650 context_radius=32 time_grid=0.25 lr=0.0005 lr_gamma=0.98 lr_step_size=20 split=0.05/*.pt'))
+    # checkpoint_paths = ['./checkpoints/2019-06-17_17-10-47 batch_size=8192 hidden_size=650 context_radius=32 time_grid=0.25 lr=0.0005 lr_gamma=0.98 lr_step_size=20 split=0.05/2019-06-17_17-10-47 batch_size=8192 hidden_size=650 context_radius=32 time_grid=0.25 lr=0.0005 lr_gamma=0.98 lr_step_size=20 split=0.05 1070.pt']
+    expr = re.compile(r'hidden_size=(\d+)')
 
-    soprano_path = f'./data/musicxml/367_soprano.musicxml'
+    table = []
 
-    bass = predict_bass(
-        soprano_path=soprano_path,
-        # checkpoint_path='./checkpoints/2019-06-09_19-31-32 batch_size=8192 hidden_size=800 context_radius=32 time_grid=0.25 lr=0.001 lr_gamma=0.98 lr_step_size=10 split=0.05 0020.pt',
-        checkpoint_path=checkpoint_path,
-        num_candidates=31
-    ).clone().detach().float()
+    for cp in tqdm(checkpoint_paths):
+        config = os.path.split(os.path.dirname(cp))[-1]
+        hidden_size = expr.findall(config)[0]
+        dirname = os.path.join('.', 'all_test_pieces_beam_search')
+        os.makedirs(dirname, exist_ok=True)
+        epoch = cp[-7:-3]
 
-    score = predict_middle_parts(
-        bass,
-        soprano_path=soprano_path,
-        # checkpoint_path='./checkpoints/2019-06-09_19-31-32 batch_size=8192 hidden_size=800 context_radius=32 time_grid=0.25 lr=0.001 lr_gamma=0.98 lr_step_size=10 split=0.05 0020.pt',
-        checkpoint_path=checkpoint_path,
-        num_candidates=24
-    )
+        # table.append({})
+        # for n in ['349', '335', '213', '110']:
+        for n in tqdm(['001', '003', '030', '035', '037', '071', '110', '112', '131', '166', '203', '213', '215', '271', '335', '349', '367']):
+            os.makedirs(os.path.join(dirname, n), exist_ok=True)
+            soprano_path = f'./data/musicxml/{n}_soprano.musicxml'
 
-    # score.write('musicxml', f'beam_search.musicxml')
-    score.show('musicxml')
+            bass, bass_loss = predict_bass(
+                soprano_path=soprano_path,
+                checkpoint_path=cp,
+                num_candidates=31
+            )
+            bass = bass.clone().detach().float()
+
+            score, middle_loss = predict_middle_parts(
+                bass,
+                soprano_path=soprano_path,
+                checkpoint_path=cp,
+                num_candidates=24
+            )
+
+            loss = bass_loss + middle_loss
+            # table[-1][n] = loss
+
+            target_path_musicxml = os.path.join(dirname, n, f'bass={loss} middle={middle_loss} e={epoch} no={n}.musicxml')
+            target_path_midi = os.path.join(dirname, n, f'bass={loss} middle={middle_loss} e={epoch} no={n}.midi')
+
+            score.write('midi', target_path_midi)
+            score.write('musicxml', target_path_musicxml)

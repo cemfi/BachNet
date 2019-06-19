@@ -104,9 +104,9 @@ class BachNetInferenceContinuo(BachNetTrainingContinuo):
         num_parts = 3
         results = torch.zeros((self.num_candidates, 1 + num_parts))  # [[Candidate index], [[ProbAcc, PitchB, PitchA, PitchT]]
 
-        inputs_bass = torch.cat(
-            [inputs[k].view(1, -1) for k in ['soprano', 'bass', 'extra']],
-            dim=1).squeeze()  # !!! SQUEEZED !!!
+        inputs_bass = torch.cat([
+            inputs[k].view(1, -1) for k in ['soprano', 'bass', 'extra']
+        ], dim=1).squeeze()
 
         outputs_bass = self.bass(inputs_bass)
 

@@ -147,19 +147,19 @@ if __name__ == '__main__':
 
     configs = []
     params = [
-        (32, 700)
+        (32, 650, 0.0005)
     ]
-    for radius, hidden_size in params:
+    for radius, hidden_size, lr in params:
         config = utils.Config({
-            'num_epochs': 1000,
+            'num_epochs': 3000,
             'batch_size': 8192,
-            'num_workers': 4,
+            'num_workers': 1,
             'hidden_size': hidden_size,
             'context_radius': radius,
             'time_grid': 0.25,
-            'lr': 0.001,
-            'lr_gamma': 0.98,
-            'lr_step_size': 10,
+            'lr': lr,
+            'lr_gamma': 0.99,
+            'lr_step_size': 30,
             'checkpoint_interval': 10,
             'split': 0.05,
 

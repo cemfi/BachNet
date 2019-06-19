@@ -12,7 +12,7 @@ from music21.analysis.discrete import Ambitus
 from music21.corpus import chorales
 from music21.expressions import Fermata
 # from music21.key import KeySignature, Key
-from music21.key import Key
+from music21.key import Key, KeySignature
 from music21.meter import TimeSignature
 from music21.note import Note, Rest
 from torch.utils.data import Dataset, RandomSampler, BatchSampler, SequentialSampler, DataLoader
@@ -123,7 +123,12 @@ def generate_data_inference(time_grid, soprano_path):
         num_sharps = keys[0].sharps
         num_sharps = (num_sharps + 12) % 12
     else:
-        num_sharps = 0
+        key_sigs = list(stream.flat.getElementsByClass(KeySignature))
+        if len(key_sigs) > 0:
+            num_sharps = key_sigs[0].sharps
+            num_sharps = (num_sharps + 12) % 12
+        else:
+            num_sharps = 0
 
     data['extra'][:, num_sharps + indices_extra['has_sharps_0']] = 1
 
@@ -222,7 +227,12 @@ def _generate_data_training(time_grid, root_dir, overwrite, split):
             num_sharps = keys[0].sharps
             num_sharps = (num_sharps + 12) % 12
         else:
-            num_sharps = 0
+            key_sigs = list(chorale.flat.getElementsByClass(KeySignature))
+            if len(key_sigs) > 0:
+                num_sharps = key_sigs[0].sharps
+                num_sharps = (num_sharps + 12) % 12
+            else:
+                num_sharps = 0
 
         # Save soprano in own file for inference
         chorale['Soprano'].write('musicxml', os.path.join(musicxml_dir, f'{str(chorale.metadata.number).zfill(3)}_soprano.musicxml'))
