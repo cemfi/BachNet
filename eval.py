@@ -7,7 +7,7 @@ loss_per_epoch_bass = {}
 loss_per_epoch_middle = {}
 expr = re.compile(r'bass=(.+) middle=(.+) e=(\d+)')
 
-file_paths = glob('./all_test_pieces_plain/**/*.midi')
+file_paths = glob('./all_test_pieces_beam_search/**/*.midi')
 
 for fp in file_paths:
     bass, middle, epoch = expr.findall(fp)[0]
@@ -19,7 +19,7 @@ for fp in file_paths:
 
 # Bass
 sorted_loss_bass = [(int(k), loss_per_epoch_bass[k]) for k in sorted(loss_per_epoch_bass, key=loss_per_epoch_bass.get, reverse=True)]
-print('Part part:')
+print('Bass part:')
 for e, l in sorted_loss_bass:
     print(e, l)
 
@@ -49,6 +49,6 @@ losses_all = []
 for i in range(len(losses_bass)):
     losses_all.append(losses_bass[i] + losses_middle[i])
 plt.plot(epochs_bass, losses_all, label='all')
-plt.legend(loc='upper left')
+plt.legend(loc='lower right')
 
 plt.show()

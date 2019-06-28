@@ -53,7 +53,7 @@ def predict_middle_parts(bass, soprano_path, checkpoint_path, num_candidates=1):
         ], dim=0)
     bass = torch.cat([
         torch.zeros((config.context_radius, bass.shape[1])),
-        bass,
+        bass.float(),
         torch.zeros((config.context_radius, bass.shape[1]))
     ], dim=0)
     predictions = model({
@@ -222,21 +222,60 @@ if __name__ == '__main__':
     from glob import glob
     import re
 
-    checkpoint_paths = sorted(glob('./checkpoints/2019-06-17_17-10-47 batch_size=8192 hidden_size=650 context_radius=32 time_grid=0.25 lr=0.0005 lr_gamma=0.98 lr_step_size=20 split=0.05/*.pt'))
-    # checkpoint_paths = ['./checkpoints/2019-06-17_17-10-47 batch_size=8192 hidden_size=650 context_radius=32 time_grid=0.25 lr=0.0005 lr_gamma=0.98 lr_step_size=20 split=0.05/2019-06-17_17-10-47 batch_size=8192 hidden_size=650 context_radius=32 time_grid=0.25 lr=0.0005 lr_gamma=0.98 lr_step_size=20 split=0.05 1070.pt']
+    # checkpoint_paths = sorted(glob('./checkpoints/2019-06-17_17-10-47 batch_size=8192 hidden_size=650 context_radius=32 time_grid=0.25 lr=0.0005 lr_gamma=0.98 lr_step_size=20 split=0.05/*.pt'))
+    checkpoint_paths = ['./checkpoints/2019-06-17_17-10-47 batch_size=8192 hidden_size=650 context_radius=32 time_grid=0.25 lr=0.0005 lr_gamma=0.98 lr_step_size=20 split=0.05/2019-06-17_17-10-47 batch_size=8192 hidden_size=650 context_radius=32 time_grid=0.25 lr=0.0005 lr_gamma=0.98 lr_step_size=20 split=0.05 0580.pt']
     expr = re.compile(r'hidden_size=(\d+)')
 
     table = []
 
-    for cp in tqdm(checkpoint_paths):
+    bass_bs = {
+        '001': 1,
+        '003': 6,
+        '030': 2,
+        '035': 1,
+        '037': 1,
+        '071': 1,
+        '110': 1,
+        '112': 1,
+        '131': 2,
+        '166': 4,
+        '203': 1,
+        '213': 1,
+        '215': 2,
+        '271': 2,
+        '335': 2,
+        '349': 1,
+        '367': 2
+    }
+
+    middle_bs = {
+        '001': 1,
+        '003': 1,
+        '030': 1,
+        '035': 1,
+        '037': 2,
+        '071': 1,
+        '110': 2,
+        '112': 1,
+        '131': 24,
+        '166': 21,
+        '203': 20,
+        '213': 1,
+        '215': 1,
+        '271': 6,
+        '335': 1,
+        '349': 6,
+        '367': 8
+    }
+
+    for cp in checkpoint_paths:
+        min_losses = {}
         config = os.path.split(os.path.dirname(cp))[-1]
         hidden_size = expr.findall(config)[0]
-        dirname = os.path.join('.', 'all_test_pieces_beam_search')
+        dirname = os.path.join('.', 'all_test_pieces_beam_search_final')
         os.makedirs(dirname, exist_ok=True)
         epoch = cp[-7:-3]
 
-        # table.append({})
-        # for n in ['349', '335', '213', '110']:
         for n in tqdm(['001', '003', '030', '035', '037', '071', '110', '112', '131', '166', '203', '213', '215', '271', '335', '349', '367']):
             os.makedirs(os.path.join(dirname, n), exist_ok=True)
             soprano_path = f'./data/musicxml/{n}_soprano.musicxml'
@@ -244,22 +283,15 @@ if __name__ == '__main__':
             bass, bass_loss = predict_bass(
                 soprano_path=soprano_path,
                 checkpoint_path=cp,
-                num_candidates=31
+                num_candidates=bass_bs[n]
             )
-            bass = bass.clone().detach().float()
 
             score, middle_loss = predict_middle_parts(
                 bass,
                 soprano_path=soprano_path,
                 checkpoint_path=cp,
-                num_candidates=24
+                num_candidates=middle_bs[n]
             )
 
-            loss = bass_loss + middle_loss
-            # table[-1][n] = loss
-
-            target_path_musicxml = os.path.join(dirname, n, f'bass={loss} middle={middle_loss} e={epoch} no={n}.musicxml')
-            target_path_midi = os.path.join(dirname, n, f'bass={loss} middle={middle_loss} e={epoch} no={n}.midi')
-
-            score.write('midi', target_path_midi)
+            target_path_musicxml = os.path.join(dirname, n, f'no={n} middle={middle_loss}@{middle_bs[n]} bass={bass_loss}@{bass_bs[n]}.musicxml')
             score.write('musicxml', target_path_musicxml)
