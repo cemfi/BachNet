@@ -84,7 +84,8 @@ class BachNetTrainingMiddleParts(torch.nn.Module):
             [inputs[k].view(batch_size, -1) for k in ['soprano', 'alto', 'tenor', 'bass_with_context', 'extra']], dim=1)
 
         outputs_alto = self.alto(inputs_alto)
-        prediction_alto = one_hot(torch.max(outputs_alto, dim=1)[1], pitch_sizes_parts['alto'] + len(indices_parts)).float()
+        prediction_alto = one_hot(torch.max(outputs_alto, dim=1)[1],
+                                  pitch_sizes_parts['alto'] + len(indices_parts)).float()
 
         inputs_tenor = torch.cat([inputs_alto, prediction_alto], dim=1)
         outputs_tenor = self.tenor(inputs_tenor)
@@ -102,7 +103,8 @@ class BachNetInferenceContinuo(BachNetTrainingContinuo):
 
     def forward(self, inputs):
         num_parts = 3
-        results = torch.zeros((self.num_candidates, 1 + num_parts))  # [[Candidate index], [[ProbAcc, PitchB, PitchA, PitchT]]
+        results = torch.zeros(
+            (self.num_candidates, 1 + num_parts))  # [[Candidate index], [[ProbAcc, PitchB, PitchA, PitchT]]
 
         inputs_bass = torch.cat([
             inputs[k].view(1, -1) for k in ['soprano', 'bass', 'extra']
@@ -131,11 +133,13 @@ class BachNetInferenceMiddleParts(BachNetTrainingMiddleParts):
 
     def forward(self, inputs):
         num_parts = 3
-        results = torch.zeros((self.num_candidates, 1 + num_parts))  # [[Candidate index], [[ProbAcc, PitchB, PitchA, PitchT]]
+        results = torch.zeros(
+            (self.num_candidates, 1 + num_parts))  # [[Candidate index], [[ProbAcc, PitchB, PitchA, PitchT]]
 
         # Alto #################################################################
-        inputs_alto = torch.cat([inputs[k].view(1, -1) for k in ['soprano', 'alto', 'tenor', 'bass_with_context', 'extra']],
-                                dim=1).squeeze()  # !!! SQUEEZED !!!
+        inputs_alto = torch.cat(
+            [inputs[k].view(1, -1) for k in ['soprano', 'alto', 'tenor', 'bass_with_context', 'extra']],
+            dim=1).squeeze()  # !!! SQUEEZED !!!
         outputs_alto = self.alto(inputs_alto)
 
         log_probabilities, pitches = torch.sort(torch.log(torch.softmax(outputs_alto, dim=0)), dim=0, descending=True)
@@ -153,7 +157,8 @@ class BachNetInferenceMiddleParts(BachNetTrainingMiddleParts):
         log_probabilities = torch.log(torch.softmax(outputs_tenor, dim=1))
         log_probabilities += math.log(self.weight_tenor)
         log_probabilities = log_probabilities.t() + results[:, 0]
-        log_probabilities, pitches_indices = torch.sort(log_probabilities.t().contiguous().view(1, -1).squeeze(), dim=0, descending=True)
+        log_probabilities, pitches_indices = torch.sort(log_probabilities.t().contiguous().view(1, -1).squeeze(), dim=0,
+                                                        descending=True)
 
         pitches_tenor = pitches_indices % (pitch_sizes_parts['tenor'] + len(indices_parts))
         history_indices = pitches_indices // (pitch_sizes_parts['tenor'] + len(indices_parts))

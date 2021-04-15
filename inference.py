@@ -1,8 +1,10 @@
+from argparse import ArgumentParser
+import utils
+
 import torch
 from torch.nn.functional import one_hot
 from tqdm import tqdm
 
-import utils
 from data import pitch_sizes_parts, generate_data_inference, indices_parts
 from model import BachNetInferenceContinuo, BachNetInferenceMiddleParts
 
@@ -100,7 +102,8 @@ def predict_middle_parts(bass, soprano_path, checkpoint_path, num_candidates=1):
         candidates[:, :, 0] = (acc_probabilities + candidates[:, :, 0].t()).t()
 
         candidate_indices = torch.argsort(candidates.view(-1, 4)[:, 0], dim=0, descending=True)
-        best_indices = torch.stack([candidate_indices // num_candidates, candidate_indices % num_candidates], dim=1)[:num_candidates]
+        best_indices = torch.stack([candidate_indices // num_candidates, candidate_indices % num_candidates], dim=1)[
+                       :num_candidates]
         # [[last_chord_idx, new_chord_idx]]
 
         history_pitches.append(torch.empty_like(history_pitches[-1]))
@@ -196,7 +199,8 @@ def predict_bass(soprano_path, checkpoint_path, num_candidates=1):
         candidates[:, :, 0] = (acc_probabilities + candidates[:, :, 0].t()).t()
 
         candidate_indices = torch.argsort(candidates.view(-1, 4)[:, 0], dim=0, descending=True)
-        best_indices = torch.stack([candidate_indices // num_candidates, candidate_indices % num_candidates], dim=1)[:num_candidates]
+        best_indices = torch.stack([candidate_indices // num_candidates, candidate_indices % num_candidates], dim=1)[
+                       :num_candidates]
         # [[last_chord_idx, new_chord_idx]]
 
         history_pitches.append(torch.empty_like(history_pitches[-1]))
@@ -217,27 +221,28 @@ def predict_bass(soprano_path, checkpoint_path, num_candidates=1):
     return bass_predicted
 
 
-if __name__ == '__main__':
+def compose_score(checkpoint_path, soprano_path):
     torch.set_grad_enabled(False)
-
-    checkpoint_path = './checkpoints/2019-06-17_17-10-47 batch_size=8192 hidden_size=650 context_radius=32 time_grid=0.25 lr=0.0005 lr_gamma=0.98 lr_step_size=20 split=0.05/2019-06-17_17-10-47 batch_size=8192 hidden_size=650 context_radius=32 time_grid=0.25 lr=0.0005 lr_gamma=0.98 lr_step_size=20 split=0.05 1070.pt'
-
-    soprano_path = f'./data/musicxml/367_soprano.musicxml'
-
     bass = predict_bass(
         soprano_path=soprano_path,
-        # checkpoint_path='./checkpoints/2019-06-09_19-31-32 batch_size=8192 hidden_size=800 context_radius=32 time_grid=0.25 lr=0.001 lr_gamma=0.98 lr_step_size=10 split=0.05 0020.pt',
         checkpoint_path=checkpoint_path,
-        num_candidates=31
+        num_candidates=1
     ).clone().detach().float()
-
     score = predict_middle_parts(
         bass,
         soprano_path=soprano_path,
-        # checkpoint_path='./checkpoints/2019-06-09_19-31-32 batch_size=8192 hidden_size=800 context_radius=32 time_grid=0.25 lr=0.001 lr_gamma=0.98 lr_step_size=10 split=0.05 0020.pt',
         checkpoint_path=checkpoint_path,
-        num_candidates=24
+        num_candidates=1
     )
+    return score
 
-    # score.write('musicxml', f'beam_search.musicxml')
+
+if __name__ == '__main__':
+    parser = ArgumentParser()
+    parser.add_argument("-c", "--checkpoint", help="path to checkpoint .pt file", metavar="PATH")
+    parser.add_argument("-m", "--musicxml", help="path to musicxml file")
+    args = parser.parse_args()
+
+    # python inference.py -c checkpoints/2021-04-06_18-18-01/2021-04-06_18-18-01_epoch=0142.pt -m data/musicxml/001_soprano.xml
+    score = compose_score(args.checkpoint, args.musicxml)
     score.show('musicxml')

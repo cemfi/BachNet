@@ -11,12 +11,30 @@ from music21 import converter
 from music21.analysis.discrete import Ambitus
 from music21.corpus import chorales
 from music21.expressions import Fermata
-# from music21.key import KeySignature, Key
 from music21.key import Key, KeySignature
 from music21.meter import TimeSignature
 from music21.note import Note, Rest
 from torch.utils.data import Dataset, RandomSampler, BatchSampler, SequentialSampler, DataLoader
-from tqdm import tqdm
+
+log = {
+    'total': 0,
+    'total_incl_aug': 0,
+    '0': 0,
+    '1': 0,
+    '2': 0,
+    '3': 0,
+    '4': 0,
+    '5': 0,
+    '6': 0,
+    '7': 0,
+    '8': 0,
+    '9': 0,
+    '10': 0,
+    '11': 0,
+    '3/4': 0,
+    '4/4': 0,
+    '3/2': 0
+}
 
 indices_parts = {
     'is_continued': 0,
@@ -85,7 +103,8 @@ class ChoralesDataset(Dataset):
         for file_path in sorted(glob(os.path.join(self.root_dir, '*.pt'))):
             data = torch.load(file_path)['data']
             for part_name, part_data in data.items():
-                self.data[part_name].append(torch.cat([part_data, torch.zeros((context_radius, part_data.shape[1]))], dim=0))
+                self.data[part_name].append(
+                    torch.cat([part_data, torch.zeros((context_radius, part_data.shape[1]))], dim=0))
 
         for part_name, part_data in self.data.items():
             self.data[part_name] = torch.cat(part_data, dim=0)
@@ -187,7 +206,7 @@ def generate_data_inference(time_grid, soprano_path):
     }
 
 
-def _generate_data_training(time_grid, root_dir, overwrite, split):
+def _generate_data_training(time_grid, root_dir, overwrite, split, debug):
     target_dir = os.path.join(root_dir, f'time_grid={time_grid} split={split}')
 
     if os.path.exists(target_dir) and not overwrite:
@@ -206,7 +225,16 @@ def _generate_data_training(time_grid, root_dir, overwrite, split):
 
     chorale_numbers = []
 
-    for chorale in tqdm(chorales.Iterator(returnType='stream'), unit='chorales', desc='Generating dataset'):
+    for chorale in chorales.Iterator(returnType='stream'):
+        print(f'Converting {chorale.corpusFilepath}')
+
+        ts_not_yet_logged = True
+        last_logged_ts = ''
+
+        # Use only 10 files when debugging
+        if debug and len(chorale_numbers) == 10:
+            break
+
         # Skip chorales with more or less than 4 parts
         if len(chorale.parts) != 4:
             continue
@@ -234,8 +262,11 @@ def _generate_data_training(time_grid, root_dir, overwrite, split):
             else:
                 num_sharps = 0
 
+        log[str(num_sharps)] = log[str(num_sharps)] + 1
+        log['total'] = log['total'] + 1
         # Save soprano in own file for inference
-        chorale['Soprano'].write('musicxml', os.path.join(musicxml_dir, f'{str(chorale.metadata.number).zfill(3)}_soprano.musicxml'))
+        chorale['Soprano'].write('musicxml', os.path.join(musicxml_dir,
+                                                          f'{str(chorale.metadata.number).zfill(3)}_soprano.musicxml'))
         chorale.write('musicxml', os.path.join(musicxml_dir, f'{str(chorale.metadata.number).zfill(3)}_full.musicxml'))
 
         # # Get minimum and maximum transpositions
@@ -250,6 +281,9 @@ def _generate_data_training(time_grid, root_dir, overwrite, split):
 
         length = math.ceil(streams['soprano'].highestTime / time_grid)
         for t in range(transpositions_down, transpositions_up + 1):
+            log['total_incl_aug'] = log['total_incl_aug'] + 1
+            # print(transpositions_down)
+            # print(transpositions_up)
             data = {'extra': torch.zeros((length, len(indices_extra)))}
             # Note transposition offset
             data['extra'][:, indices_extra['pitch_offset']] = t
@@ -290,16 +324,41 @@ def _generate_data_training(time_grid, root_dir, overwrite, split):
                         if type(element) == TimeSignature:
                             if element.ratioString == '3/4':
                                 data['extra'][offset:, indices_extra['has_time_signature_3/4']] = 1
+                                if t == 0:
+                                    log['3/4'] = log['3/4'] + 1
+                                    if not ts_not_yet_logged:
+                                        print("2nd ts found")
+                                        print(last_logged_ts)
+                                        print(' and 3/4')
+                                        streams['soprano'].show()
+                                    ts_not_yet_logged = False
+                                    last_logged_ts = '3/4'
                                 data['extra'][offset:, indices_extra['has_time_signature_4/4']] = 0
                                 data['extra'][offset:, indices_extra['has_time_signature_3/2']] = 0
                             elif element.ratioString == '4/4':
                                 data['extra'][offset:, indices_extra['has_time_signature_3/4']] = 0
                                 data['extra'][offset:, indices_extra['has_time_signature_4/4']] = 1
+                                if t == 0:
+                                    log['4/4'] = log['4/4'] + 1
+                                    if not ts_not_yet_logged:
+                                        print("2nd ts found")
+                                        print(last_logged_ts)
+                                        print(' and 4/4')
+                                    ts_not_yet_logged = False
+                                    last_logged_ts = '4/4'
                                 data['extra'][offset:, indices_extra['has_time_signature_3/2']] = 0
                             elif element.ratioString == '3/2':
                                 data['extra'][offset:, indices_extra['has_time_signature_3/4']] = 0
                                 data['extra'][offset:, indices_extra['has_time_signature_4/4']] = 0
                                 data['extra'][offset:, indices_extra['has_time_signature_3/2']] = 1
+                                if t == 0:
+                                    log['3/2'] = log['3/2'] + 1
+                                    if not ts_not_yet_logged:
+                                        print("2nd ts found")
+                                        print(last_logged_ts)
+                                        print(' and 3/2')
+                                    ts_not_yet_logged = False
+                                    last_logged_ts = '3/2'
 
             measure_offsets = [o / time_grid for o in streams['soprano'].measureOffsetMap().keys()]
             cur_offset = streams['soprano'].flat.notesAndRests[0].beat
@@ -313,17 +372,22 @@ def _generate_data_training(time_grid, root_dir, overwrite, split):
 
             signum = '+' if t >= 0 else '-'
 
-            target_file_path = os.path.join(target_dir, f'{str(chorale.metadata.number).zfill(3)}{signum}{int(math.fabs(t))}.pt')
+            target_file_path = os.path.join(target_dir,
+                                            f'{str(chorale.metadata.number).zfill(3)}{signum}{int(math.fabs(t))}.pt')
             torch.save({
                 'data': data,
                 'title': chorale.metadata.title
             }, target_file_path)
 
+        ts_not_yet_logged = False
+
+        # print(log)
         chorale_numbers.append(str(chorale.metadata.number).zfill(3))
 
     # Move files to train / test directories
     random.shuffle(chorale_numbers)  # Shuffle in place
     split_idx = int(len(chorale_numbers) * split)
+    split_idx = max(1, split_idx)
 
     for cn in chorale_numbers[split_idx:]:  # Train
         file_paths = glob(os.path.join(target_dir, f'*{cn}*.pt'))
@@ -379,7 +443,24 @@ def _make_data_loaders(root_dir, batch_size, num_workers, context_radius):
     }
 
 
-def get_data_loaders(time_grid=0.25, root_dir=None, overwrite=False, split=0.05, batch_size=1, num_workers=1, context_radius=32):
+def get_data_loaders(time_grid=0.25, root_dir=None, overwrite=False, split=0.05, batch_size=1, num_workers=1,
+                     context_radius=32, debug=False):
+    '''
+    Gets the data loaders.
+
+    Args:
+        time_grid:
+        root_dir:
+        overwrite:
+        split:
+        batch_size:
+        num_workers:
+        context_radius:
+        debug: load only few files for testing
+
+    Returns:
+
+    '''
     if root_dir is None:
         root_dir = os.path.join('.', 'data')
 
@@ -387,7 +468,8 @@ def get_data_loaders(time_grid=0.25, root_dir=None, overwrite=False, split=0.05,
         time_grid=time_grid,
         root_dir=root_dir,
         overwrite=overwrite,
-        split=split
+        split=split,
+        debug=debug
     )
 
     data_loaders = _make_data_loaders(

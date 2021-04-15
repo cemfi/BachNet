@@ -31,8 +31,8 @@ class Config(object):
     lr_gamma = 0.95
     time_grid = 0.25
     context_radius = 32
-    checkpoint_root_dir = os.path.join('.', 'checkpoints')
-    checkpoint_interval = None
+    checkpoint_root_dir = 'checkpoints'
+    checkpoint_interval = 10
     log_interval = 1
     split = 0.05
     seed = 1234
@@ -46,7 +46,8 @@ class Config(object):
             self.explicit = {}
 
     def __repr__(self):
-        blacklist = ['checkpoint_root_dir', 'checkpoint_interval', 'use_cuda', 'num_epochs', 'num_workers', 'log_interval']
+        blacklist = ['checkpoint_root_dir', 'checkpoint_interval', 'use_cuda', 'num_epochs', 'num_workers',
+                     'log_interval']
         config_string = ' '.join([f'{k}={v}' for k, v in self.explicit.items() if k not in blacklist]).strip()
         return config_string
 
@@ -101,7 +102,9 @@ def tensors_to_stream(outputs, config, metadata=None):
                         part[-1].append(clef.TrebleClef())
                     else:
                         part[-1].append(clef.BassClef())
-                    key = int(torch.argmax(outputs['extra'][0, indices_extra['has_sharps_0']:indices_extra['has_sharps_11'] + 1], dim=0).item())
+                    key = int(torch.argmax(
+                        outputs['extra'][0, indices_extra['has_sharps_0']:indices_extra['has_sharps_11'] + 1],
+                        dim=0).item())
                     if key >= 6:
                         key -= 12
                     part[-1].append(KeySignature(key))

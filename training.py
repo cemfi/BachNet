@@ -14,27 +14,18 @@ import utils
 from model import BachNetTrainingContinuo, BachNetTrainingMiddleParts
 
 
-def main(config):
+def train(config, data_loaders):
     logging.debug('Initializing...')
 
     # Prepare logging
     date = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    log_dir = os.path.join('.', 'runs', f'{date} {str(config)}')
+    log_dir = os.path.join('.', 'runs', f'{date}')
     writer = SummaryWriter(log_dir=log_dir)
 
     logging.debug(f'Configuration:\n{pprint.pformat(config)}')
 
     device = torch.device("cuda:0" if config.use_cuda and torch.cuda.is_available() else "cpu")
     logging.debug(f'Using device: {device}')
-
-    logging.debug('Loading datasets...')
-    data_loaders = data.get_data_loaders(
-        batch_size=config.batch_size,
-        num_workers=config.num_workers,
-        time_grid=config.time_grid,
-        context_radius=config.context_radius,
-        split=config.split,
-    )
 
     logging.debug('Creating model...')
     model_continuo = BachNetTrainingContinuo(
@@ -82,15 +73,18 @@ def main(config):
                     inputs, targets = batch
                     # Transfer to device
                     inputs_for_continuo = {k: inputs[k].to(device) for k in ['soprano', 'bass', 'extra']}
-                    inputs_for_middle_parts = {k: inputs[k].to(device) for k in ['soprano', 'alto', 'tenor', 'bass_with_context', 'extra']}
+                    inputs_for_middle_parts = {k: inputs[k].to(device) for k in
+                                               ['soprano', 'alto', 'tenor', 'bass_with_context', 'extra']}
                     targets_continuo = {k: targets[k].to(device) for k in ['bass']}
                     targets_middleparts = {k: targets[k].to(device) for k in ['alto', 'tenor']}
 
                     predictions_continuo = model_continuo(inputs_for_continuo)
-                    losses_continuo = {k: criterion(predictions_continuo[k], targets_continuo[k]) for k in targets_continuo.keys()}
+                    losses_continuo = {k: criterion(predictions_continuo[k], targets_continuo[k]) for k in
+                                       targets_continuo.keys()}
 
                     predictions_middleparts = model_middle_parts(inputs_for_middle_parts)
-                    losses_middleparts = {k: criterion(predictions_middleparts[k], targets_middleparts[k]) for k in targets_middleparts.keys()}
+                    losses_middleparts = {k: criterion(predictions_middleparts[k], targets_middleparts[k]) for k in
+                                          targets_middleparts.keys()}
 
                     loss = sum([sum(losses_middleparts.values()), sum(losses_continuo.values())])
 
@@ -113,8 +107,10 @@ def main(config):
                     if batch_idx % config.log_interval == 0:
                         step = int((float(epoch) + (batch_idx / len(data_loaders[phase]))) * 1000)
                         writer.add_scalars('loss', {phase: loss.item()}, step)
-                        writer.add_scalars('loss_per_parts', {f'{phase}_{k}': v for k, v in losses_continuo.items()}, step)
-                        writer.add_scalars('loss_per_parts', {f'{phase}_{k}': v for k, v in losses_middleparts.items()}, step)
+                        writer.add_scalars('loss_per_parts', {f'{phase}_{k}': v for k, v in losses_continuo.items()},
+                                           step)
+                        writer.add_scalars('loss_per_parts', {f'{phase}_{k}': v for k, v in losses_middleparts.items()},
+                                           step)
 
                 # Log mean loss per epoch
                 mean_loss_per_epoch = mean(loss_lists['all'])
@@ -125,9 +121,11 @@ def main(config):
         lr_scheduler_middleparts.step()
 
         if config.checkpoint_interval is not None and (epoch + 1) % config.checkpoint_interval == 0:
-            subfolder = f'{date} {str(config)}'
-            os.makedirs(os.path.join(config.checkpoint_root_dir, subfolder), exist_ok=True)
-            checkpoint_path = os.path.join(config.checkpoint_root_dir, subfolder, f'{date} {str(config)} {str(epoch + 1).zfill(4)}.pt')
+            subfolder = f'{date}'  # {str(config)}
+            folder = os.path.join(config.checkpoint_root_dir, subfolder)
+            os.makedirs(folder, exist_ok=True)
+            fname = f'{date}_epoch={str(epoch + 1).zfill(4)}.pt'
+            checkpoint_path = os.path.join(folder, fname)
             torch.save({
                 'config': config,
                 'state_continuo': model_continuo.state_dict(),
@@ -139,34 +137,39 @@ def main(config):
 
             }, checkpoint_path)
 
+            txt_file = os.path.join(folder, 'config.txt')
+            with open(txt_file, 'w') as f:
+                f.write(str(config))
+
     writer.close()
 
+
+std_config = utils.Config({
+    'num_epochs': 3000,
+    'batch_size': 8192,
+    'num_workers': 1,
+    'hidden_size': 650,
+    'context_radius': 32,
+    'time_grid': 0.25,
+    'lr': 0.0005,
+    'lr_gamma': 0.99,
+    'lr_step_size': 30,
+    'checkpoint_interval': 1,
+    'split': 0.05,
+
+})
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.ERROR)
 
-    configs = []
-    params = [
-        (32, 650, 0.0005)
-    ]
-    for radius, hidden_size, lr in params:
-        config = utils.Config({
-            'num_epochs': 3000,
-            'batch_size': 8192,
-            'num_workers': 1,
-            'hidden_size': hidden_size,
-            'context_radius': radius,
-            'time_grid': 0.25,
-            'lr': lr,
-            'lr_gamma': 0.99,
-            'lr_step_size': 30,
-            'checkpoint_interval': 10,
-            'split': 0.05,
+    logging.debug('Loading datasets...')
+    data_loaders = data.get_data_loaders(
+        batch_size=std_config.batch_size,
+        num_workers=std_config.num_workers,
+        time_grid=std_config.time_grid,
+        context_radius=std_config.context_radius,
+        split=std_config.split,
+        debug=False
+    )
 
-        })
-        configs.append(config)
-
-    from tqdm import tqdm
-
-    for config in tqdm(configs):
-        main(config)
+    train(std_config, data_loaders)
